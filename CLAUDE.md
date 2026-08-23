@@ -14,36 +14,26 @@ the index of every binding standard in this repo.
 ## Commands
 
 ```bash
-# First run: build images, install deps, migrate, boot everything
-make init                 # then http://localhost:8080
-
-make up / make down       # start / stop the stack
-make shell                # bash inside the php-fpm container
-make logs-app             # tail storage/logs/laravel.log
-
-# Tests — sqlite :memory:, no MySQL or Redis needed (see phpunit.xml)
-make test
-make test-filter FILTER=HealthEndpoint
-
-# Style
-make pint                 # check
-make pint-fix             # fix in place
-
-# Database
-make migrate
-make migrate-fresh        # DESTROYS dev data
-
-# Anything else
-make artisan CMD="route:list"
-make composer CMD="require foo/bar"
-make npm CMD="run build"
-
-# Optional Loki + Promtail + Grafana (http://localhost:3000, admin/admin)
-make obs-up
+make            # list the targets
+make up         # build, install, migrate and start everything (safe to re-run)
+make start      # resume after `make stop`
+make stop       # stop the containers
+make down       # stop and remove them (the database volume survives)
+make exec       # bash inside the php-fpm container
+make logs       # tail every container
+make test       # the feature suite; `make test FILTER=CampaignTest` narrows it
+make pint       # fix PHP code style
+make artisan CMD="route:list"   # anything else
 ```
 
-Production runs from the server, not from here: `make prod-*` and
-`./scripts/deploy.sh`. See [`guidelines/DEPLOYMENT-GUIDE.md`](./guidelines/DEPLOYMENT-GUIDE.md).
+Ten targets, deliberately. Everything the Makefile does not cover is reachable
+with `make exec` or `make artisan CMD="..."`.
+
+`make up` on a fresh clone is the whole setup; the app comes up at
+http://localhost:8080.
+
+Production runs from the server, not from here: `./scripts/deploy.sh`. See
+[`docs/deployment.md`](./docs/deployment.md).
 
 ## Architecture
 
@@ -65,9 +55,8 @@ Every JSON response uses one envelope: `{ "result": ..., "errors": ... }`.
 
 **Before writing any backend code, invoke the `marketing-backend-ddd` skill.** It
 carries the module skeleton and every layer template. The rationale and the
-module checklist are in [`guidelines/backend_guidelines.md`](./guidelines/backend_guidelines.md);
-the layering rules are in [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
-(mirrored to `.ai/ARCHITECTURE.md`).
+module checklist are in [`.ai/backend-guidelines.md`](./.ai/backend-guidelines.md);
+the layering rules are in [`.ai/architecture.md`](./.ai/architecture.md).
 
 ## Critical invariants (do not break)
 
@@ -89,8 +78,12 @@ the layering rules are in [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
   `declare(strict_types=1)` in every file.
 - **axios only in frontend repositories.** Stores call repositories, components
   call stores.
-- **Tests never touch MySQL, Redis, the network, or a real LLM.** `phpunit.xml`
-  pins sqlite `:memory:`; keep it that way.
+- **Every test is a feature test through a real entry point.** There is no
+  `tests/Unit/`. Nothing this repo owns — repositories, Services — is ever
+  mocked; only what leaves the machine is faked.
+- **The suite runs against MySQL**, schema `marketing_ai_testing`, so repository
+  tests exercise the queries that ship. Redis, the network and the LLM stay out:
+  `phpunit.xml` pins array cache, sync queue and array mailer.
 - **Secrets live in `src/.env` (Laravel) and `.env.docker` (Compose).** Neither
   is in git. Any new variable must be added to `src/.env.example` or
   `.env.docker.example` in the same change.
@@ -167,8 +160,9 @@ Once context is approved, create `spec/YYYY-MM-DD-{case-name}/plan.md`. The plan
 - Respect the layering described in the Architecture section
   (`Presentation/Http` → `Application/Services` → `Infrastructure/Repositories`
   → `Model`) and the invariants above.
-- Follow the repo's testing conventions: PHPUnit via `php artisan test`, sqlite
-  `:memory:`, no Docker/MySQL/network — see [`.ai/test-guidelines.md`](./.ai/test-guidelines.md).
+- Follow the repo's testing conventions: feature tests only, through a real
+  entry point, against the MySQL testing schema — see
+  [`.ai/test-guidelines.md`](./.ai/test-guidelines.md).
 - Include a migration in `src/database/migrations/` for any schema change.
 - Keep the relevant `docs/` file in sync when a documented fact changes.
 - List every file to create or modify, with its purpose.
@@ -185,7 +179,7 @@ Never run all agents at once. Launch only the agents needed for the current phas
 | Agent | Task |
 |---|---|
 | `marketing-fullstack-agent` | Implement the backend change (Laravel), the migration, and the Vue side if touched |
-| `marketing-test-agent` | Write the PHPUnit test(s) for the new code under `src/tests/` |
+| `marketing-test-agent` | Write the feature test(s) for the new code under `src/tests/Feature/` |
 
 Split the fullstack agent in two (backend + frontend) when the change is large
 enough that the two halves do not touch the same files.
@@ -193,7 +187,7 @@ enough that the two halves do not touch the same files.
 ### Phase 2 — Test Execution
 
 Launch a single agent that:
-1. Runs only the affected tests: `make test-filter FILTER=YourTest`
+1. Runs only the affected tests: `make test FILTER=YourTest`
 2. Reports failures clearly — do NOT proceed to Phase 3 if tests fail; fix first.
 
 ### Phase 3 — Quality Control (parallel)
@@ -201,7 +195,7 @@ Launch a single agent that:
 | Agent | Task |
 |---|---|
 | `marketing-code-reviewer` | Read-only audit: invariants, security, layering, complexity, test quality, doc drift |
-| Style runner | `make pint-fix`, then `npm run build` in the `node` service if the frontend changed |
+| Style runner | `make pint`, then a frontend build if `resources/js/` changed |
 
 ### Phase 4 — Simplify
 
@@ -259,12 +253,14 @@ everything an agent must follow, and it holds the cross-cutting rules that belon
 to no single document — most notably **comments are a last resort** (write one
 only for a WHY that cannot be expressed in code; never narrate WHAT).
 
-From there: [`.ai/test-guidelines.md`](./.ai/test-guidelines.md) (testing),
-[`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) (structure, layering, patterns)
-and [`guidelines/backend_guidelines.md`](./guidelines/backend_guidelines.md) (why
-the backend is shaped this way, plus the new-module checklist).
-`.ai/ARCHITECTURE.md` is a mirror of `docs/ARCHITECTURE.md`.
+Documentation lives in exactly two places, with nothing mirrored between them:
+**`.ai/`** binds agents (architecture, backend, tests), **`docs/`** holds the rest
+(the two visual canvases and the deployment guide).
 
+From there: [`.ai/test-guidelines.md`](./.ai/test-guidelines.md) (testing),
+[`.ai/architecture.md`](./.ai/architecture.md) (structure, layering, patterns)
+and [`.ai/backend-guidelines.md`](./.ai/backend-guidelines.md) (why
+the backend is shaped this way, plus the new-module checklist).
 The `marketing-backend-ddd` skill holds the code templates for every backend
 layer. Invoke it rather than reproducing a pattern from memory.
 
@@ -318,9 +314,9 @@ and without asking permission first.
    session.
 2. **The standard it belongs to** — cross-cutting code rules →
    `.ai/ai-guidelines.md` · testing → `.ai/test-guidelines.md` · structure,
-   layering, patterns → `docs/ARCHITECTURE.md` (re-copy to `.ai/ARCHITECTURE.md`)
-   · backend patterns → the `marketing-backend-ddd` skill and
-   `guidelines/backend_guidelines.md` · workflow → this file.
+   layering, patterns → `.ai/architecture.md` · backend patterns → the
+   `marketing-backend-ddd` skill and `.ai/backend-guidelines.md` · workflow →
+   this file.
 
 Memory carries the *rule and its why*; the standard carries the *detail*. A rule
 that only lives in one of the two will be broken.
@@ -349,11 +345,21 @@ and QA findings are resolved — the main thread runs one doc-sync pass:
    touched: a default value, a route, an env var, an invariant, a file-structure
    entry, a table column, a limit, a make target.
 2. **Update every file that is now stale**, in the same change:
-   `README.md`, `CLAUDE.md`, `docs/**`, `.ai/**` (including re-copying
-   `docs/ARCHITECTURE.md` → `.ai/ARCHITECTURE.md` when it changed),
-   `guidelines/**`, `src/.env.example`, `.env.docker.example`, and
+   `.ai/**`, `README.md`, `CLAUDE.md`, `docs/deployment.md`, `src/.env.example`,
+   `.env.docker.example`, the `marketing-backend-ddd` skill, and
    `spec/YYYY-MM-DD-{case-name}/plan.md` + `guide.md`.
-3. **Say what you synced and what you checked and found still accurate.** "Docs
+3. **Re-read the two canvases and make them true again.** They are documentation,
+   not decoration, and they are the last thing anyone reads before touching this
+   project:
+   - [`docs/project-map.html`](./docs/project-map.html) — repo layout, stack,
+     container topology, ports, env files, deploy path, the make targets.
+   - [`docs/system-flows.html`](./docs/system-flows.html) — the doors, the layers,
+     a request end to end, errors and logging, outbound calls and credentials,
+     the proposal/approval invariant, account isolation, testing, the workflow.
+
+   A new service, a new port, a new module, a new entry point, a changed
+   invariant, a renamed make target: it lands there too, or the canvas is lying.
+4. **Say what you synced and what you checked and found still accurate.** "Docs
    updated" without a list is not a report.
 
 A doc that contradicts the code is worse than a missing doc — it is trusted and

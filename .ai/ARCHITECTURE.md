@@ -15,7 +15,7 @@ marketing-ai-manager/
 │   ├── resources/views/app.blade.php   # the single blade entrypoint
 │   ├── routes/api.php       # every JSON endpoint
 │   ├── routes/web.php       # catch-all that renders app.blade.php
-│   └── tests/
+│   └── tests/Feature/      # feature tests only; there is no tests/Unit
 ├── docker/                  # nginx, php.ini, mysql init, observability configs
 ├── scripts/                 # deploy.sh, setup-production.sh
 ├── docker-compose.yml       # development stack
@@ -34,6 +34,35 @@ browser
 
 `/up` is Laravel's built-in health endpoint and is what `deploy.sh` smoke-tests.
 `/api/health` is the application's own liveness probe.
+
+## One core, many doors
+
+HTTP is not the only way in. The chat assistant's tools, scheduled jobs and (in
+future) an MCP server are all **driving adapters**: thin doors that translate
+their own input into a DTO and call the same Service.
+
+```
+HTTP request        Chat tool_use         Scheduled job        MCP call (future)
+     ↓                    ↓                     ↓                    ↓
+FormRequest          Tool class            Job class            Mcp handler
+     ↓                    ↓                     ↓                    ↓
+Controller ─────────────→ Service ←────────────┴────────────────────┘
+                             ↓
+                     Repository / Client
+                             ↓
+                      Model / ApiClient
+```
+
+Three consequences, all load-bearing:
+
+- **Doors hold no business logic.** Validation at the boundary, DTO, delegate.
+- **Invariants live in Services and Domain**, so no door can bypass them.
+- **Mutations proposed by the LLM are not executions.** A mutation Tool calls a
+  `Propose*Service` that persists a `Proposal`. The executing Service is
+  reachable only from the human approval endpoint
+  (`POST /api/v1/proposals/{id}/accept`), which the LLM does not know about.
+  There is no code path from a Tool to an executing Service — the architecture
+  enforces the approval rule, not the prompt.
 
 ## Backend — modular DDD
 
@@ -60,10 +89,12 @@ app/Modules/{Module}/
 │   ├── Repositories/            # readonly, the only place that talks to the DB
 │   └── Clients/                 # external API clients
 ├── Presentation/
-│   └── Http/
-│       ├── Controllers/Api/
-│       └── Requests/            # validation + toDTO()
-└── {Module}ServiceProvider.php  # binds contracts → implementations
+│   ├── Http/
+│   │   ├── Controllers/Api/
+│   │   └── Requests/            # validation + toDTO()
+│   ├── Tools/                   # chat assistant tools (driving adapters)
+│   └── Jobs/                    # queued and scheduled entry points
+└── {Module}ServiceProvider.php  # binds contracts, registers tools
 ```
 
 Register each provider in `bootstrap/providers.php`. Migrations stay in
@@ -71,7 +102,7 @@ Register each provider in `bootstrap/providers.php`. Migrations stay in
 those globally.
 
 Full patterns and templates: the `marketing-backend-ddd` skill. Rationale and the
-module checklist: [`guidelines/backend_guidelines.md`](../guidelines/backend_guidelines.md).
+module checklist: [`.ai/backend-guidelines.md`](../.ai/backend-guidelines.md).
 
 ### The Core module
 
@@ -84,6 +115,8 @@ builds on it and never duplicates it.
 | `Presentation/Http/Responses/ApiResponse` | The single JSON envelope. |
 | `Presentation/Http/Responses/ExceptionRenderer` | Maps any exception — domain, validation, auth, a router 404 — into that envelope. |
 | `Presentation/Http/Requests/RequestHelperTrait` | Typed accessors for validated input. |
+| `Presentation/Tools/ToolRegistry` | Maps tool name → Tool class, with its schema. The chat loop and the future MCP adapter both read from it. |
+| `Presentation/Tools/ToolAbstract` | Base chat tool: schema, input validation, account context. |
 | `Domain/Exceptions/ApiException` | Base domain exception: context, log level, HTTP status. |
 | `Domain/Exceptions/ClientException` | An `ApiException` whose message is safe to show the caller. |
 | `Domain/Exceptions/ApiCallFailedException` | Raised by `ApiClientAbstract` on any failed outbound call. |
@@ -110,7 +143,7 @@ error response.
 
 | Layer | May depend on | Must never |
 |---|---|---|
-| Controller | Service, FormRequest, DTO | Touch Eloquent, build queries, catch anything |
+| Door (Controller, Tool, Job) | Service, DTO | Touch Eloquent, build queries, catch anything, hold a business rule |
 | Service | Repository/client **contracts**, DTO | Know about HTTP; catch exceptions |
 | Repository | Model, query builder | Contain business rules |
 | Client | Guzzle (via `ApiClientAbstract`) | Leak a Guzzle type outside Infrastructure |
@@ -122,6 +155,8 @@ error response.
 - Nothing type-hints a concrete repository; the provider resolves the contract.
 - A module may depend on another module's Service, never on its repository,
   model or client.
+- **Every tenant-owned table carries `account_id`,** the account travels in the
+  DTO, and repositories always filter by it. Tests assert the isolation.
 
 ### Errors and logging
 
@@ -139,12 +174,22 @@ caller. A provider's raw response goes in `context`, which only reaches the logs
 An exception that is not an `ApiException` gets a generic message unless
 `APP_DEBUG` is on — a library's message is not ours to publish.
 
-### External API clients
+### External API clients and credentials
 
-Outbound integrations are built by `GuzzleClientFactory` and bound as singletons
-in the owning module's service provider, with credentials read from
-`config/services.php`. `env()` is never called outside `config/` — production
-runs on a cached config, where it returns `null`.
+Outbound integrations are built by `GuzzleClientFactory`. How they are bound
+depends on whose credentials they carry:
+
+| Kind | Identifies | Source | Binding |
+|---|---|---|---|
+| Platform (Google OAuth client, Meta App, DB, Redis) | the application | `config/services.php` reading `env()` | singleton in the module's provider |
+| Account / BYOK (Apify key, LLM key, Meta and Google tokens) | the user | encrypted in that account's integrations | a `*ClientFactory` resolving `forAccount($accountId)` per request or job |
+
+An account-scoped client — or its key — is never cached in a singleton, a static
+property or shared container state. Resolve per account, use, discard: a
+singleton would serve every account with one user's key.
+
+`env()` is never called outside `config/` — production runs on a cached config,
+where it returns `null`.
 
 A client names its endpoints as constants, shapes the parameters, and translates
 `ApiCallFailedException` into its own domain exception. No caching, no business
@@ -206,7 +251,7 @@ Neither file is in git. Every new variable must land in `src/.env.example` or
 |---|---|---|
 | `app` | php-fpm 8.4, code bind-mounted | same image, opcache on, timestamps frozen |
 | `nginx` | `:8080`, plain HTTP | `:80` → redirect, `:443` TLS from Let's Encrypt |
-| `db` | MySQL 8.4 on `:3307` | MySQL 8.4, bound to `127.0.0.1:3306` |
+| `db` | MySQL 8.4 on `:3307`; also holds the `marketing_ai_testing` schema | MySQL 8.4, bound to `127.0.0.1:3306` |
 | `redis` | `:6380` — cache, sessions, queue | internal only |
 | `node` | Vite dev server on `:5173` | not present; assets are prebuilt by `deploy.sh` |
 | `queue` | `queue:work` | `queue:work` with `--max-time=3600` |

@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa del proyecto · Marketing AI Manager</title>
+<link rel="stylesheet" href="_canvas.css">
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="kicker">Canvas 1 de 2 · Estructura y stack</span>
+    <h1>Mapa del proyecto</h1>
+    <p>Qué hay en el repositorio, qué contenedor ejecuta cada cosa, por dónde entra el
+       tráfico y cómo llega el código al servidor. Para los flujos internos de la
+       aplicación, el otro canvas: <a href="system-flows.html">Flujos del sistema</a>.</p>
+    <div class="meta">
+      <span><b>Repo</b> marketing-ai-manager</span>
+      <span><b>Stack</b> Laravel 13 · Vue 3 · MySQL 8.4</span>
+      <span><b>Despliegue</b> VPS único, Docker Compose</span>
+    </div>
+  </div>
+</header>
+
+<nav><div class="wrap"><ul>
+  <li><a href="#repo">Repositorio</a></li>
+  <li><a href="#stack">Stack</a></li>
+  <li><a href="#dev">Contenedores · dev</a></li>
+  <li><a href="#prod">Contenedores · producción</a></li>
+  <li><a href="#env">Entornos</a></li>
+  <li><a href="#deploy">Despliegue</a></li>
+  <li><a href="#comandos">Comandos</a></li>
+  <li><a href="#docs">Documentación</a></li>
+</ul></div></nav>
+
+<section id="repo">
+<div class="wrap">
+  <h2><span class="n">01</span> El repositorio</h2>
+  <p>Un solo repositorio, un solo desplegable. La aplicación Laravel vive entera dentro de
+     <code>src/</code>; todo lo que la rodea —contenedores, scripts, documentación— vive en la raíz.</p>
+
+<pre>marketing-ai-manager/
+├── <b>src/</b>                        <em>la aplicación Laravel</em>
+│   ├── app/<b>Modules/</b>            <em>TODO el backend; un módulo por dominio</em>
+│   │   └── Core/                <em>base compartida: envoltorio, excepciones, clientes</em>
+│   ├── bootstrap/app.php        <em>rutas, middleware, render de excepciones</em>
+│   ├── database/migrations/
+│   ├── resources/js/            <em>la SPA de Vue</em>
+│   ├── routes/api.php           <em>todo endpoint JSON</em>
+│   ├── routes/web.php           <em>catch-all que sirve app.blade.php</em>
+│   └── tests/Feature/           <em>solo feature tests; no existe tests/Unit</em>
+│
+├── <b>docker/</b>                     <em>configuración de los contenedores</em>
+│   ├── nginx/                   <em>default.conf (dev) · default.prod.conf.template</em>
+│   ├── php/                     <em>php.dev.ini · php.prod.ini</em>
+│   ├── mysql/                   <em>01-create-testing-database.sql</em>
+│   └── observability/           <em>loki · promtail · datasource de grafana</em>
+│
+├── <b>scripts/</b>                    <em>deploy.sh · setup-production.sh</em>
+├── <b>.ai/</b>                        <em>estándares vinculantes para agentes</em>
+├── <b>docs/</b>                       <em>este canvas, el de flujos y deployment.md</em>
+├── <b>spec/</b>                       <em>una carpeta por unidad de trabajo (fuera de git)</em>
+│
+├── docker-compose.yml           <em>desarrollo</em>
+├── docker-compose.prod.yml      <em>producción</em>
+├── Dockerfile                   <em>php:8.4-fpm, la misma imagen en ambos</em>
+├── Makefile                     <em>diez objetivos, ni uno más</em>
+└── CLAUDE.md                    <em>cómo se trabaja aquí</em></pre>
+
+  <div class="card amber">
+    <h4>Una regla estructural</h4>
+    <p>Todo el backend vive en <code>src/app/Modules/</code>. <code>app/Http/</code> solo
+       guarda el <code>Controller</code> base de Laravel, <code>app/Models/</code> solo
+       <code>User</code> hasta que exista el módulo de autenticación, y
+       <code>app/Services/</code> no se crea nunca.</p>
+  </div>
+</div>
+</section>
+
+<section id="stack">
+<div class="wrap">
+  <h2><span class="n">02</span> El stack</h2>
+
+  <table>
+    <tr><th>Capa</th><th>Tecnología</th><th>Dónde se configura</th></tr>
+    <tr><td><b>Runtime</b></td><td>PHP 8.4 (php-fpm)</td><td><code>Dockerfile</code>, <code>docker/php/php.*.ini</code></td></tr>
+    <tr><td><b>Framework</b></td><td>Laravel 13</td><td><code>src/composer.json</code></td></tr>
+    <tr><td><b>Base de datos</b></td><td>MySQL 8.4</td><td><code>src/.env</code> + <code>.env.docker</code></td></tr>
+    <tr><td><b>Caché, sesiones, colas</b></td><td>Redis 7</td><td><code>src/.env</code></td></tr>
+    <tr><td><b>Frontend</b></td><td>Vue 3 · Vue Router · Pinia · axios</td><td><code>src/package.json</code></td></tr>
+    <tr><td><b>Estilos</b></td><td>TailwindCSS 4 — sin <code>tailwind.config.js</code></td><td><code>resources/css/app.css</code> vía <code>@theme</code></td></tr>
+    <tr><td><b>Build</b></td><td>Vite</td><td><code>src/vite.config.js</code></td></tr>
+    <tr><td><b>Servidor web</b></td><td>nginx</td><td><code>docker/nginx/</code></td></tr>
+    <tr><td><b>Estilo de código</b></td><td>Laravel Pint</td><td><code>make pint</code></td></tr>
+    <tr><td><b>Pruebas</b></td><td>PHPUnit, feature tests contra MySQL</td><td><code>src/phpunit.xml</code></td></tr>
+    <tr><td><b>Observabilidad</b></td><td>Loki · Promtail · Grafana <span class="tag">perfil opcional</span></td><td><code>docker/observability/</code></td></tr>
+  </table>
+</div>
+</section>
+
+<section id="dev">
+<div class="wrap">
+  <h2><span class="n">03</span> Contenedores · desarrollo</h2>
+  <p><code>docker-compose.yml</code>. Todo se levanta con <code>make up</code>.</p>
+
+<pre>                       navegador (tu máquina)
+                              │
+        ┌─────────────────────┼──────────────────────┬───────────────┐
+        │ :8080               │ :5173                │ :8025         │
+        ▼                     ▼                      ▼               │
+  ┌───────────┐        ┌─────────────┐        ┌────────────┐         │
+  │  <b>nginx</b>    │        │  <b>node</b>       │        │  <b>mailpit</b>   │         │
+  │  :80      │        │ Vite HMR    │        │ correo dev │         │
+  └─────┬─────┘        └─────────────┘        └────────────┘         │
+        │ fastcgi :9000                                              │
+        ▼                                                            │
+  ┌───────────┐        ┌─────────────┐                               │
+  │  <b>app</b>      │        │  <b>queue</b>      │  php artisan queue:work      │
+  │  php-fpm  │        │  php-fpm    │                               │
+  └─────┬─────┘        └──────┬──────┘                               │
+        │                     │                                      │
+        └──────────┬──────────┘                                      │
+                   │                                                 │
+        ┌──────────┴──────────┐                                      │
+        ▼                     ▼                                      │
+  ┌───────────┐        ┌─────────────┐    perfil <u>observability</u>      │
+  │  <b>db</b>       │        │  <b>redis</b>      │    ┌──────────────────────┴──┐
+  │ MySQL 8.4 │        │  :6379      │    │ loki ← promtail          │
+  │ :3306     │        └─────────────┘    │   ↓                      │
+  └───────────┘                           │ grafana  :3000           │
+   marketing_ai                           └──────────────────────────┘
+   marketing_ai_testing</pre>
+
+  <table>
+    <tr><th>Servicio</th><th>Puerto en el host</th><th>Para qué</th></tr>
+    <tr><td><code>nginx</code></td><td><b>8080</b></td><td>La aplicación</td></tr>
+    <tr><td><code>node</code></td><td><b>5173</b></td><td>Servidor de Vite con recarga en caliente</td></tr>
+    <tr><td><code>mailpit</code></td><td><b>8025</b></td><td>Bandeja de correo de desarrollo</td></tr>
+    <tr><td><code>db</code></td><td><b>3307</b> → 3306</td><td>MySQL. Dos esquemas: la app y las pruebas</td></tr>
+    <tr><td><code>redis</code></td><td><b>6380</b> → 6379</td><td>Caché, sesiones y colas</td></tr>
+    <tr><td><code>app</code></td><td>—</td><td>php-fpm, código montado desde <code>./src</code></td></tr>
+    <tr><td><code>queue</code></td><td>—</td><td><code>queue:work</code></td></tr>
+    <tr><td><code>grafana</code></td><td><b>3000</b> <span class="tag">perfil</span></td><td>Logs, con <code>--profile observability</code></td></tr>
+  </table>
+
+  <div class="card blue">
+    <h4>Los puertos son configurables</h4>
+    <p><code>HTTP_PORT=9000 make up</code>. Igual con <code>VITE_PORT</code>,
+       <code>MYSQL_PORT</code>, <code>REDIS_PORT</code>, <code>MAILPIT_PORT</code> y
+       <code>GRAFANA_PORT</code>. Están desplazados respecto a los puertos por defecto
+       (3307, 6380) para no chocar con otros proyectos levantados a la vez.</p>
+  </div>
+</div>
+</section>
+
+<section id="prod">
+<div class="wrap">
+  <h2><span class="n">04</span> Contenedores · producción</h2>
+  <p><code>docker-compose.prod.yml</code>, en <code>/var/www/marketing-ai-manager</code>.
+     Misma imagen que en desarrollo; cambian el <code>php.ini</code>, el entorno y qué se expone.</p>
+
+<pre>                        internet
+                            │
+                    :80 ────┴──── :443
+                     │             │
+                     ▼             ▼
+              ┌──────────────────────────┐
+              │        <b>nginx</b>             │  80 → 301 → 443
+              │  TLS Let's Encrypt       │  /build/ → caché 1 año, immutable
+              │  plantilla ${APP_DOMAIN} │  /.well-known/ → renovación certbot
+              └────────────┬─────────────┘
+                           │ fastcgi
+        ┌──────────────────┼──────────────────┐
+        ▼                  ▼                  ▼
+  ┌───────────┐     ┌─────────────┐    ┌──────────────┐
+  │  <b>app</b>      │     │  <b>queue</b>      │    │  <b>scheduler</b>   │
+  │ opcache   │     │ queue:work  │    │ schedule:work│
+  │ timestamps│     │ --max-time  │    │              │
+  │ congelados│     │   =3600     │    │              │
+  └─────┬─────┘     └──────┬──────┘    └──────┬───────┘
+        └──────────────────┼──────────────────┘
+                ┌──────────┴──────────┐
+                ▼                     ▼
+        ┌───────────────┐     ┌─────────────┐
+        │  <b>db</b>           │     │  <b>redis</b>      │
+        │ <u>127.0.0.1:3306</u>│     │ solo interno│
+        └───────────────┘     └─────────────┘
+
+        perfil <u>observability</u>:  loki ← promtail ·  grafana en <u>127.0.0.1:3000</u>
+        (se alcanza por túnel SSH, nunca desde internet)</pre>
+
+  <div class="split">
+    <div class="card green">
+      <h4>Qué se expone</h4>
+      <ul>
+        <li>80 y 443 — nginx</li>
+        <li>22 — SSH</li>
+        <li>Nada más. UFW deniega el resto.</li>
+      </ul>
+    </div>
+    <div class="card red">
+      <h4>Qué NO se expone</h4>
+      <ul>
+        <li>MySQL, atado a <code>127.0.0.1</code></li>
+        <li>Redis, solo en la red interna</li>
+        <li>Grafana, atado a <code>127.0.0.1</code></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card amber">
+    <h4>Diferencias reales entre dev y producción</h4>
+    <p>Añade <code>scheduler</code>, <code>restart: unless-stopped</code> y healthchecks.
+       Quita <code>node</code> (los assets se compilan durante el despliegue) y
+       <code>mailpit</code>. Monta <code>php.prod.ini</code>, con opcache activo y
+       <code>validate_timestamps=0</code>: el código no se relee del disco, por eso
+       cada despliegue reconstruye las cachés.</p>
+  </div>
+</div>
+</section>
+
+<section id="env">
+<div class="wrap">
+  <h2><span class="n">05</span> Dos ficheros de entorno</h2>
+  <p>Los lee software distinto. Confundirlos es el error más común al montar el servidor.</p>
+
+  <div class="split">
+    <div class="card blue">
+      <h4><code>.env.docker</code> — lo lee Docker Compose</h4>
+      <p>Con qué credenciales se <b>crea</b> MySQL, y qué dominio sirve nginx.</p>
+      <ul>
+        <li><code>APP_DOMAIN</code> — elige el certificado TLS</li>
+        <li><code>MYSQL_DATABASE</code> / <code>USER</code> / <code>PASSWORD</code></li>
+        <li><code>MYSQL_ROOT_PASSWORD</code></li>
+        <li><code>GRAFANA_ADMIN_*</code></li>
+      </ul>
+    </div>
+    <div class="card purple">
+      <h4><code>src/.env</code> — lo lee Laravel</h4>
+      <p>Con qué credenciales se <b>conecta</b> la aplicación, y todo lo demás.</p>
+      <ul>
+        <li><code>APP_KEY</code>, <code>APP_URL</code>, <code>APP_DEBUG</code></li>
+        <li><code>DB_*</code> — deben coincidir con los de arriba</li>
+        <li><code>REDIS_HOST=redis</code></li>
+        <li>Credenciales de plataforma (OAuth, LLM)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card red">
+    <h4>La trampa</h4>
+    <p>MySQL solo lee sus variables <b>al crear el volumen</b>. Cambiar
+       <code>MYSQL_PASSWORD</code> en <code>.env.docker</code> sobre una instalación que ya
+       existe no cambia la contraseña real del usuario: hay que hacer <code>ALTER USER</code>
+       dentro de MySQL y actualizar <code>src/.env</code>. Si los dos ficheros divergen, la
+       aplicación no puede entrar en su propia base de datos.</p>
+  </div>
+
+  <p>Ninguno de los dos está en git. Las credenciales por cuenta (BYOK: Apify, tokens de
+     Meta y Google del usuario) <b>no van en ningún <code>.env</code></b>: viven cifradas en
+     las integraciones de cada cuenta y se resuelven en tiempo de ejecución.</p>
+</div>
+</section>
+
+<section id="deploy">
+<div class="wrap">
+  <h2><span class="n">06</span> Del push al servidor</h2>
+
+<pre>  git push origin main
+        │
+        ▼
+  ┌──────────────────────────────┐
+  │ <b>Actions · CI</b>                │  Pint · PHPUnit contra MySQL · build de frontend
+  └───────────────┬──────────────┘
+                  │ solo si pasa    <s>un build en rojo nunca llega al servidor</s>
+                  ▼
+  ┌──────────────────────────────┐
+  │ <b>Actions · Deploy</b>            │  workflow_run · concurrency: production-deploy
+  └───────────────┬──────────────┘
+                  │ ssh
+                  ▼
+  ┌──────────────────────────────────────────────────────────┐
+  │ <b>scripts/deploy.sh</b>  en /var/www/marketing-ai-manager   │
+  │                                                          │
+  │  1. git fetch + reset --hard    <em>sobrevive a un force-push</em> │
+  │  2. compose up -d --build                                │
+  │  3. esperar a MySQL                                      │
+  │  4. composer install --no-dev                            │
+  │  5. assets en un node:22-alpine desechable               │
+  │  6. artisan migrate --force                              │
+  │  7. optimize:clear + config/route/view/event:cache       │
+  │  8. queue:restart + restart queue scheduler              │
+  │  9. curl https://APP_DOMAIN/up  ×10                      │
+  └──────────────────────────────────────────────────────────┘</pre>
+
+  <div class="split">
+    <div class="card amber">
+      <h4>Por qué <code>reset --hard</code> y no <code>pull</code></h4>
+      <p>Un rebase o un force-push en <code>main</code> dejaría un <code>pull</code>
+         atascado en un conflicto a las tres de la mañana. <code>reset</code> siempre
+         converge.</p>
+    </div>
+    <div class="card amber">
+      <h4>Por qué reiniciar los workers</h4>
+      <p><code>queue:work</code> mantiene el código viejo en memoria mientras viva el
+         proceso. Sin el reinicio, el despliegue lleva código nuevo a la web y código
+         viejo a la cola.</p>
+    </div>
+  </div>
+
+  <p>El servidor no necesita Node: los assets se compilan en un contenedor desechable.
+     Un servidor nuevo se prepara una sola vez con <code>scripts/setup-production.sh</code>.
+     Detalle completo —DNS, TLS, secretos de Actions, rollback, backups— en
+     <a href="deployment.md">deployment.md</a>.</p>
+</div>
+</section>
+
+<section id="comandos">
+<div class="wrap">
+  <h2><span class="n">07</span> Los diez comandos</h2>
+  <p>Deliberadamente diez. Lo que no cubren se alcanza con <code>make exec</code> o con
+     <code>make artisan CMD="..."</code>.</p>
+
+  <table>
+    <tr><th>Comando</th><th>Qué hace</th></tr>
+    <tr><td><code>make</code></td><td>Lista los objetivos</td></tr>
+    <tr><td><code>make up</code></td><td>Construye, instala, migra y arranca. Se puede repetir sin miedo</td></tr>
+    <tr><td><code>make start</code></td><td>Reanuda tras un <code>stop</code></td></tr>
+    <tr><td><code>make stop</code></td><td>Para los contenedores sin borrarlos</td></tr>
+    <tr><td><code>make down</code></td><td>Los para y los borra. El volumen de la base sobrevive</td></tr>
+    <tr><td><code>make exec</code></td><td>Bash dentro del contenedor de php-fpm</td></tr>
+    <tr><td><code>make logs</code></td><td>Sigue los logs de todos los contenedores</td></tr>
+    <tr><td><code>make test</code></td><td>La suite; <code>make test FILTER=CampaignTest</code> la acota</td></tr>
+    <tr><td><code>make pint</code></td><td>Arregla el estilo de PHP</td></tr>
+    <tr><td><code>make artisan CMD="..."</code></td><td>Cualquier otra cosa: <code>migrate</code>, <code>tinker</code>, <code>route:list</code></td></tr>
+  </table>
+</div>
+</section>
+
+<section id="docs">
+<div class="wrap">
+  <h2><span class="n">08</span> Dónde está cada documento</h2>
+  <p>Dos sitios, sin espejos. Cada hecho vive en un único fichero.</p>
+
+  <div class="split">
+    <div class="card">
+      <h4><code>.ai/</code> — vincula a los agentes</h4>
+      <ul>
+        <li><code>ai-guidelines.md</code> — índice y reglas transversales</li>
+        <li><code>architecture.md</code> — puertas, capas, módulos</li>
+        <li><code>backend-guidelines.md</code> — el porqué + checklist de módulo</li>
+        <li><code>test-guidelines.md</code> — cómo se prueba</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4><code>docs/</code> — todo lo demás</h4>
+      <ul>
+        <li><code>project-map.html</code> — este canvas</li>
+        <li><code>system-flows.html</code> — los flujos</li>
+        <li><code>deployment.md</code> — montar y desplegar el servidor</li>
+      </ul>
+    </div>
+  </div>
+
+  <p>Fuera de esos dos: <code>CLAUDE.md</code> en la raíz (cómo se trabaja: specs, fases,
+     agentes) y la skill <code>marketing-backend-ddd</code> (plantillas de cada capa).</p>
+
+  <div class="card green">
+    <h4>Estos dos canvas se mantienen al día</h4>
+    <p>Forman parte de la pasada de sincronización de documentación con la que termina
+       cualquier cambio. Puerto nuevo, servicio nuevo, módulo nuevo, flujo nuevo: se
+       refleja aquí antes de dar el trabajo por terminado.</p>
+  </div>
+</div>
+</section>
+
+<footer><div class="wrap">
+  Marketing AI Manager · <a href="system-flows.html">Flujos del sistema →</a>
+</div></footer>
+
+</body>
+</html>

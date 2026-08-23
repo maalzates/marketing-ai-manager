@@ -91,8 +91,10 @@ Nothing else. No caching, no business rules, no persistence.
 6. Add routes to `routes/api.php`, grouped and prefixed by module.
 7. Add any new config to `config/services.php` and the variables to
    `src/.env.example`.
-8. Tests: Service unit tests with the contract mocked, repository and endpoint
-   feature tests against sqlite. See `.ai/test-guidelines.md`.
+8. Tests: **feature tests only**, entering through the route (or job, or
+   command) and asserting both the response and the rows written, against the
+   MySQL testing schema. No unit tests, no mocked repositories. See
+   `.ai/test-guidelines.md`.
 
 ## Where things do NOT go
 

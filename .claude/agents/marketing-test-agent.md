@@ -15,14 +15,21 @@ You own `src/tests/` in Marketing AI Manager.
 
 `.ai/test-guidelines.md` is binding. Read it before writing. The short version:
 
-- The suite runs on sqlite `:memory:` with array cache, sync queue, array mailer.
-  **No MySQL, no Redis, no network, no real LLM call.** Ever.
+- **Feature tests only.** There is no `tests/Unit/`. Every test enters through a
+  real entry point — an HTTP route, a dispatched job, an artisan command — and
+  exercises the whole chain down to the database. If the entry point does not
+  exist yet, it is created as part of the change.
+- The suite runs against **MySQL** (`marketing_ai_testing`), with array cache,
+  sync queue and array mailer. **No Redis, no network, no real LLM call.** Ever.
+- **Never mock a repository or a Service.** Only what leaves the machine is
+  faked: external HTTP (Guzzle `MockHandler`, `Http::fake()`) and the LLM.
 - One behaviour per test. Name it as a sentence:
   `test_rejects_a_brief_without_a_campaign()`.
 - Factories, not hand-built arrays.
 - Assert the specific keys the caller depends on, not a whole-payload structure.
 - `Http::fake()` or a container-bound stub for anything external. LLM responses
   come from `tests/Fixtures/llm/`.
+- Use `RefreshDatabase` in anything that touches the database.
 
 ## The rule with no exceptions
 
@@ -34,7 +41,7 @@ yours. Report the failure with the shortest decisive line of output.
 ## Running
 
 ```bash
-make test-filter FILTER=YourTest   # while iterating
+make test FILTER=YourTest          # while iterating
 make test                          # before you report done
 ```
 

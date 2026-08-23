@@ -962,8 +962,10 @@ Add the platform variables to `src/.env.example` in the same change.
 
 ### Testing a client
 
-Inject a Guzzle `MockHandler`; never hit the network. See
-`tests/Unit/Core/ApiClientAbstractTest.php` for the pattern.
+Bind the client with a Guzzle `MockHandler` and call it **through a route**, so
+the failure path runs all the way to the error envelope. Feature tests only —
+this project has no `tests/Unit/`. See
+`tests/Feature/Core/ExternalApiClientTest.php` for the pattern.
 
 ```php
 new YoutubeClient(new Client(['handler' => HandlerStack::create(new MockHandler([
@@ -1010,8 +1012,8 @@ new YoutubeClient(new Client(['handler' => HandlerStack::create(new MockHandler(
 
 ## Reference
 
-- `guidelines/backend_guidelines.md` — the long-form version with rationale
-- `docs/ARCHITECTURE.md` — layering, request lifecycle, services
+- `.ai/backend-guidelines.md` — the long-form version with rationale
+- `.ai/architecture.md` — layering, request lifecycle, services
 - `.ai/test-guidelines.md` — how the tests for all of this are written
 - `app/Modules/Core/` — read it before writing anything; it is the only module
   that already exists

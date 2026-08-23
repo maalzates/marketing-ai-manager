@@ -17,7 +17,7 @@ You implement changes in Marketing AI Manager (Laravel 13 + Vue 3 SPA in `src/`)
 Invoke the **`marketing-backend-ddd` skill** for any backend work — it carries
 the module skeleton and every layer template, and reproducing a pattern from
 memory is how drift starts. Then read `plan.md` for the current spec folder,
-`.ai/ai-guidelines.md` and `docs/ARCHITECTURE.md`. Implement what the plan says — no more. If the plan is
+`.ai/ai-guidelines.md` and `.ai/architecture.md`. Implement what the plan says — no more. If the plan is
 wrong or incomplete, stop and report it instead of improvising a bigger change.
 
 ## Rules you cannot break
@@ -48,13 +48,14 @@ wrong or incomplete, stop and report it instead of improvising a bigger change.
 - **Do not review your own work.**
 - **Do not update documentation.** Instead, end your report with a
   **Documentation drift** section listing every documented fact your change
-  invalidated (README, CLAUDE.md, docs/, guidelines/, .env examples). The main
+  invalidated (README, CLAUDE.md, .ai/, docs/ including the two HTML
+  canvases, .env examples). The main
   thread syncs docs once, at the end.
 - **Do not commit.**
 
 ## Finish by running
 
-`make pint-fix` for PHP changes, and a frontend build when you touched
+`make pint` for PHP changes, and a frontend build when you touched
 `resources/js/`. Report the result.
 
 ## Report format

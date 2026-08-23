@@ -39,7 +39,10 @@ the code it directly touches. Do not audit the whole repo.
 5. **Complexity and the simplify lens.** Duplicated logic that already exists
    elsewhere, a nesting depth that hides the happy path, an abstraction with one
    caller, a query in a loop.
-6. **Documentation drift.** Documented facts the change made false.
+6. **Documentation drift.** Documented facts the change made false — including
+   the two canvases in `docs/`. A new service, port, module, entry point or make
+   target that is not reflected in `project-map.html` / `system-flows.html` is a
+   finding, not a nicety.
 
 ## Output
 

@@ -5,14 +5,23 @@ a habit, the rule wins.
 
 ## The map
 
+Documentation lives in exactly two places. `.ai/` is what binds an agent; `docs/`
+is everything else. Nothing is mirrored — each fact has one home.
+
 | Document | Covers |
 |---|---|
-| [`.ai/ARCHITECTURE.md`](./ARCHITECTURE.md) (mirror of [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md)) | Structure, layering, module skeleton, configuration |
+| [`.ai/architecture.md`](./architecture.md) | Structure, doors, layering, module skeleton, configuration |
+| [`.ai/backend-guidelines.md`](./backend-guidelines.md) | Why the backend is shaped this way + new-module checklist |
 | [`.ai/test-guidelines.md`](./test-guidelines.md) | How tests are written and run |
-| [`../guidelines/backend_guidelines.md`](../guidelines/backend_guidelines.md) | Why the backend is shaped this way + new-module checklist |
+| [`../CLAUDE.md`](../CLAUDE.md) | Spec-driven workflow, phases, agent roles, doc sync |
 | `marketing-backend-ddd` skill | Code templates for every backend layer |
-| [`../CLAUDE.md`](../CLAUDE.md) | Spec-driven workflow, phases, agent roles |
-| [`../guidelines/DEPLOYMENT-GUIDE.md`](../guidelines/DEPLOYMENT-GUIDE.md) | Server setup and deployment |
+| [`../docs/project-map.html`](../docs/project-map.html) | Visual: repo layout, stack, containers, deploy path |
+| [`../docs/system-flows.html`](../docs/system-flows.html) | Visual: the core flows and what the app can do |
+| [`../docs/deployment.md`](../docs/deployment.md) | Server setup and deployment |
+
+The two HTML canvases are part of the documentation, not decoration. They are
+checked and updated at the end of every change — see the doc-sync section of
+`CLAUDE.md`.
 
 ## The backend is modular, always
 
@@ -77,7 +86,7 @@ than it saves.
 
 ## Style is enforced, not debated
 
-`make pint-fix` before you hand work off. `make pint` must pass. Nobody argues
+`make pint` before you hand work off. Nobody argues
 about brace placement in review.
 
 ## Explicit over clever

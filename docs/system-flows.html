@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flujos del sistema · Marketing AI Manager</title>
+<link rel="stylesheet" href="_canvas.css">
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="kicker">Canvas 2 de 2 · Flujos y núcleo</span>
+    <h1>Flujos del sistema</h1>
+    <p>Cómo entra una petición, dónde vive la lógica, qué pasa cuando algo falla, cómo se
+       llama a una API externa y por qué el asistente no puede gastar dinero solo. Para la
+       estructura y los contenedores, el otro canvas:
+       <a href="project-map.html">Mapa del proyecto</a>.</p>
+    <div class="meta">
+      <span><b>Patrón</b> monolito modular · DDD</span>
+      <span><b>Convergencia</b> la capa de Services</span>
+      <span><b>Invariante</b> ninguna puerta la esquiva</span>
+    </div>
+  </div>
+</header>
+
+<nav><div class="wrap"><ul>
+  <li><a href="#puertas">Un núcleo, varias puertas</a></li>
+  <li><a href="#capas">Las capas</a></li>
+  <li><a href="#peticion">Una petición</a></li>
+  <li><a href="#errores">Errores y logs</a></li>
+  <li><a href="#externas">APIs externas</a></li>
+  <li><a href="#propuestas">Propuestas</a></li>
+  <li><a href="#cuentas">Aislamiento por cuenta</a></li>
+  <li><a href="#pruebas">Pruebas</a></li>
+  <li><a href="#trabajo">Cómo se trabaja</a></li>
+</ul></div></nav>
+
+<section id="puertas">
+<div class="wrap">
+  <h2><span class="n">01</span> Un núcleo, varias puertas</h2>
+  <p>HTTP no es la única forma de entrar. Las herramientas del asistente de chat, los jobs
+     programados y —en el futuro— un servidor MCP son <b>adaptadores de entrada</b>: puertas
+     finas que traducen su formato a un DTO y llaman al mismo Service.</p>
+
+<pre>  petición HTTP      tool_use del chat      job programado       llamada MCP <em>(futuro)</em>
+        │                   │                     │                    │
+        ▼                   ▼                     ▼                    ▼
+   FormRequest          clase Tool            clase Job          handler Mcp
+   valida + toDTO()     valida + DTO          construye DTO      reusa las tools
+        │                   │                     │                    │
+        ▼                   ▼                     ▼                    ▼
+   Controller ──────────────┴──→ <b>Service</b> ←──────┴────────────────────┘
+                                    │
+                                    ▼
+                        Repository  /  ApiClient      <em>las únicas capas que tocan</em>
+                                    │                 <em>Eloquent o HTTP saliente</em>
+                                    ▼
+                             Model  /  API externa</pre>
+
+  <div class="split3">
+    <div class="card blue">
+      <h4>Las puertas no deciden</h4>
+      <p>Validan su entrada, construyen un DTO y delegan. Un <code>if</code> sobre
+         presupuestos o veredictos dentro de una puerta está en el sitio equivocado.</p>
+    </div>
+    <div class="card blue">
+      <h4>Los invariantes están en el centro</h4>
+      <p>Topes de gasto, aprobaciones, guardarraíles: se aplican una vez, en el Service, y
+         valen para todas las puertas automáticamente.</p>
+    </div>
+    <div class="card blue">
+      <h4>Validar ≠ invariante</h4>
+      <p>Cada puerta valida su formato. Que un presupuesto no supere el tope no es
+         validación: es lógica de dominio, y nunca vive en una puerta.</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<section id="capas">
+<div class="wrap">
+  <h2><span class="n">02</span> Las capas de un módulo</h2>
+  <p>Un módulo es un trozo acotado del dominio y expone al resto de la aplicación una sola
+     cosa: un Service.</p>
+
+<pre>app/Modules/{Módulo}/
+├── <b>Application/</b>
+│   ├── DTO/                 <em>readonly; viajan Puerta → Service → Repository</em>
+│   └── Services/            <em>readonly; AQUÍ vive la lógica de negocio</em>
+├── <b>Domain/</b>
+│   ├── Contracts/           <em>interfaces de repositorios y clientes</em>
+│   ├── Enums/
+│   └── Exceptions/          <em>extienden ApiException / ClientException de Core</em>
+├── <b>Infrastructure/</b>
+│   ├── Persistence/         <em>modelos Eloquent</em>
+│   ├── Repositories/        <em>readonly; lo único que habla con la base de datos</em>
+│   └── Clients/             <em>clientes de APIs externas</em>
+├── <b>Presentation/</b>            <em>las puertas</em>
+│   ├── Http/{Controllers,Requests}
+│   ├── Tools/               <em>herramientas del asistente</em>
+│   └── Jobs/                <em>entradas encoladas y programadas</em>
+└── {Módulo}ServiceProvider.php</pre>
+
+  <table>
+    <tr><th>Capa</th><th>Puede depender de</th><th>Nunca</th></tr>
+    <tr><td><b>Puerta</b><br><span class="tag">Controller · Tool · Job</span></td><td>Service, DTO</td><td>Tocar Eloquent, construir consultas, capturar excepciones, contener una regla</td></tr>
+    <tr><td><b>Service</b></td><td>Contratos, DTO</td><td>Saber de HTTP; capturar excepciones</td></tr>
+    <tr><td><b>Repository</b></td><td>Modelo, query builder</td><td>Contener reglas de negocio; devolver arrays</td></tr>
+    <tr><td><b>Client</b></td><td>Guzzle vía <code>ApiClientAbstract</code></td><td>Dejar escapar un tipo de Guzzle fuera de Infrastructure</td></tr>
+    <tr><td><b>Model</b></td><td>—</td><td>Lógica más allá de relaciones, casts y scopes</td></tr>
+  </table>
+
+  <div class="card amber">
+    <h4>Entre módulos</h4>
+    <p>Un módulo puede depender del <b>Service</b> de otro. Nunca de su repositorio, su
+       modelo ni su cliente. Alcanzar
+       <code>App\Modules\Otro\Infrastructure\…</code> es como un monolito modular se
+       convierte en un monolito normal con carpetas de más.</p>
+  </div>
+</div>
+</section>
+
+<section id="peticion">
+<div class="wrap">
+  <h2><span class="n">03</span> Una petición, de punta a punta</h2>
+
+  <ol class="steps">
+    <li><b>nginx</b> recibe. <code>/api/*</code> y los ficheros de <code>public/</code> los
+        resuelve él; todo lo demás va a php-fpm.</li>
+    <li><b>Ruta.</b> <code>routes/api.php</code> para JSON. <code>routes/web.php</code> es un
+        único catch-all que sirve <code>app.blade.php</code>: a partir de ahí manda el router
+        de Vue.</li>
+    <li><b>FormRequest.</b> <code>prepareForValidation()</code> transforma,
+        <code>rules()</code> valida, <code>toDTO()</code> mapea. Un <code>toDTO()</code> que
+        transforma es un bug.</li>
+    <li><b>Controller.</b> Una línea: pasa el DTO al Service y envuelve lo que vuelva en
+        <code>$this->response</code>.</li>
+    <li><b>Service.</b> Las reglas. Comprueba, orquesta, y lanza excepciones de dominio con
+        <code>?? throw</code>.</li>
+    <li><b>Repository.</b> La consulta, siempre filtrada por <code>account_id</code>.
+        Devuelve <code>Collection</code>, <code>Model</code> o
+        <code>LengthAwarePaginator</code>. Nunca un array.</li>
+    <li><b>Respuesta.</b> Un único envoltorio, para acierto y para error.</li>
+  </ol>
+
+<pre><i>{ "result": { "id": "camp_1" }, "errors": [] }</i>
+
+<s>{ "result": [], "errors": { "message": "Campaign not found", "status_code": 404 } }</s>
+
+<em>en un fallo de validación, además:</em>
+<s>{ "result": [], "errors": { "message": "…", "status_code": 422,
+                            "fields": { "name": ["The name field is required."] } } }</s></pre>
+
+  <p>En el frontend, el flujo es el espejo:
+     <code>Componente → Store → Repository → axios → /api</code>. Los repositorios
+     desenvuelven <code>data.result</code>; el interceptor de <code>bootstrap.js</code>
+     aplana el error a un único <code>Error</code> con <code>status</code> y
+     <code>errors</code>. axios solo se toca en los repositorios.</p>
+</div>
+</section>
+
+<section id="errores">
+<div class="wrap">
+  <h2><span class="n">04</span> Errores y logs — una sola línea por fallo</h2>
+
+<pre>  Repository / Client            <em>los ÚNICOS dos sitios con try/catch</em>
+        │
+        │  throw CampaignCreationFailedException::wrap($e, context: [...])
+        ▼
+  Service                        <em>no captura — deja pasar</em>
+        │
+        ▼
+  Controller                     <em>no captura — deja pasar</em>
+        │
+        ▼
+  ┌────────────────────────────────────────────────────────┐
+  │  <b>bootstrap/app.php</b>                                    │
+  │                                                        │
+  │  report()  → Log::log( <u>$e->getLogLevel()</u> ,             │
+  │                        $e->getMessage(),               │
+  │                        $e->getContext() )              │
+  │                                                        │
+  │  render()  → <b>ExceptionRenderer</b>  →  envoltorio de error │
+  └────────────────────────────────────────────────────────┘</pre>
+
+  <div class="split">
+    <div class="card">
+      <h4>La excepción decide su nivel</h4>
+      <table style="margin:0">
+        <tr><th>Status</th><th>Nivel</th></tr>
+        <tr><td>400, 422</td><td><code>info</code></td></tr>
+        <tr><td>resto de 4xx</td><td><code>warning</code></td></tr>
+        <tr><td>5xx</td><td><code>error</code></td></tr>
+      </table>
+      <p style="margin-top:10px">Un código fuera del rango HTTP (un driver de MySQL lanza
+         <code>1045</code>) se normaliza a 500.</p>
+    </div>
+    <div class="card">
+      <h4>Qué se le devuelve al llamante</h4>
+      <ul>
+        <li><code>ClientException</code> — su <code>clientMessage</code> y sus
+            <code>extras</code>. Es culpa del llamante y puede arreglarlo.</li>
+        <li><code>ApiException</code> — su mensaje, que siempre lo ha escrito una persona.</li>
+        <li>Cualquier otra — mensaje genérico, salvo con <code>APP_DEBUG</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card red">
+    <h4>Nadie llama a <code>Log::</code> a mano</h4>
+    <p>Loguear <i>y</i> lanzar produce dos entradas del mismo fallo, con dos niveles y dos
+       formas, y la manual se escribe aunque la excepción se acabe manejando más arriba. El
+       detalle crudo del proveedor va en <code>context</code>, que solo llega a los logs;
+       nunca al cuerpo de la respuesta.</p>
+  </div>
+
+  <p><code>ExceptionRenderer</code> cubre también lo que lanza Laravel —validación, auth, un
+     404 del router— así que el frontend nunca se encuentra dos formas distintas de error.</p>
+</div>
+</section>
+
+<section id="externas">
+<div class="wrap">
+  <h2><span class="n">05</span> Llamar a una API externa</h2>
+  <p>YouTube, Instagram Graph, Meta Marketing, Apify, el LLM. Todas siguen la misma forma.</p>
+
+<pre>  Service
+     │  $this->client->getChannel($id)
+     ▼
+  <b>YoutubeClient</b> extends ApiClientAbstract      <em>endpoints como constantes</em>
+     │
+     │  catch (ApiCallFailedException) → throw YoutubeClientException::from…
+     ▼
+  <b>ApiClientAbstract</b>                            <em>verbos, JSON, traducción de errores</em>
+     │                                            <em>contexto: método, URI, opciones,</em>
+     ▼                                            <em>status y cuerpo decodificado</em>
+  <b>GuzzleClientFactory</b>                          <em>timeouts y cabeceras compartidos</em>
+     │
+     ▼
+  proveedor</pre>
+
+  <h3>Dos tipos de credencial, dos mecanismos</h3>
+  <table>
+    <tr><th>Tipo</th><th>Identifica a</th><th>De dónde sale</th><th>Cómo se liga</th></tr>
+    <tr>
+      <td><b>Plataforma</b><br><span class="tag blue">OAuth client, App id, DB</span></td>
+      <td>la aplicación</td>
+      <td><code>config/services.php</code> leyendo <code>env()</code></td>
+      <td>singleton en el provider del módulo</td>
+    </tr>
+    <tr>
+      <td><b>Cuenta · BYOK</b><br><span class="tag purple">Apify, LLM, tokens del usuario</span></td>
+      <td>el usuario</td>
+      <td>cifradas en las integraciones de la cuenta</td>
+      <td><code>*ClientFactory-&gt;forAccount($id)</code>, por petición o job</td>
+    </tr>
+  </table>
+
+  <div class="card red">
+    <h4>Nunca cachear un cliente de cuenta</h4>
+    <p>Ni en un singleton, ni en una propiedad estática, ni en estado compartido del
+       contenedor. Un singleton serviría a todas las cuentas con la clave de un usuario.
+       Resolver por cuenta, usar, descartar.</p>
+  </div>
+
+  <p><code>env()</code> no se llama nunca fuera de <code>config/</code>: en producción la
+     configuración está cacheada y devuelve <code>null</code>.</p>
+</div>
+</section>
+
+<section id="propuestas">
+<div class="wrap">
+  <h2><span class="n">06</span> El asistente propone, la persona ejecuta</h2>
+  <p>El invariante más importante del sistema, y está en la arquitectura, no en el prompt.</p>
+
+<pre>  el LLM pide una mutación
+        │
+        ▼
+  <b>PauseCampaignTool</b>                    <em>una tool de mutación</em>
+        │
+        │  <s>NO existe camino de código de aquí al Service que ejecuta</s>
+        ▼
+  <b>ProposalService::create()</b>            <em>persiste una Proposal y la devuelve</em>
+        │
+        ▼
+  la propuesta aparece en la interfaz
+        │
+        │  la persona pulsa aceptar
+        ▼
+  <b>POST /api/v1/proposals/{id}/accept</b>    <em>puerta HTTP que el LLM no conoce</em>
+        │
+        ▼
+  <b>CampaignPauseService</b>                 <em>ahora sí, ejecuta</em></pre>
+
+  <div class="split">
+    <div class="card green">
+      <h4>Por qué así</h4>
+      <p>Un modelo se equivoca; un <code>if</code> no. El tope de gasto y la exigencia de
+         aprobación son validaciones duras en el backend, no instrucciones del tipo «no
+         gastes más de X».</p>
+    </div>
+    <div class="card amber">
+      <h4>Qué significa al escribir código</h4>
+      <p>Una tool de mutación importa <code>ProposalService</code>. Si te encuentras
+         importando el Service que ejecuta desde una tool, has roto el invariante — no hay
+         una versión aceptable de eso.</p>
+    </div>
+  </div>
+
+  <p>Las tools de lectura sí ejecutan directamente: consultar métricas o listar campañas no
+     cambia nada ni cuesta dinero.</p>
+</div>
+</section>
+
+<section id="cuentas">
+<div class="wrap">
+  <h2><span class="n">07</span> Aislamiento por cuenta</h2>
+  <p>La aplicación es multi-cuenta desde el primer día, así que no hay un «luego lo
+     añadimos».</p>
+
+<pre>  toda tabla de usuario lleva  <b>account_id</b>
+        │
+        ▼
+  la cuenta viaja en el <b>DTO</b>          <em>no en una variable global, no en la sesión</em>
+        │
+        ▼
+  el Repository <b>siempre</b> filtra
+        │
+        ▼
+  <i>-&gt;where('account_id', $filters-&gt;accountId)</i></pre>
+
+  <p>Ningún Service, Tool ni Job alcanza datos de otra cuenta. Las pruebas lo afirman
+     explícitamente: crear dos cuentas, pedir desde una, comprobar que lo de la otra no
+     aparece.</p>
+</div>
+</section>
+
+<section id="pruebas">
+<div class="wrap">
+  <h2><span class="n">08</span> Cómo se prueba</h2>
+
+  <div class="card green">
+    <h4>Solo feature tests. No existe <code>tests/Unit</code>.</h4>
+    <p>Toda prueba entra por una puerta real y recorre la cadena entera hasta MySQL.</p>
+  </div>
+
+<pre>  petición HTTP   →  ruta  →  controller  →  service  →  repository  →  <b>MySQL</b>
+  job despachado  →  handler  →  service  →  repository  →  <b>MySQL</b>
+  comando artisan →  service  →  repository  →  <b>MySQL</b></pre>
+
+  <p>Un unit test con el repositorio mockeado afirma que un Service llamó a un método. Sigue
+     en verde con la consulta rota, la ruta sin registrar y el binding sin declarar — las
+     tres cosas que de verdad se rompen.</p>
+
+  <div class="split">
+    <div class="card">
+      <h4>Contra MySQL, no sqlite</h4>
+      <p><code>phpunit.xml</code> solo sobrescribe <code>DB_DATABASE</code>
+         (<code>marketing_ai_testing</code>); el resto de la conexión viene de
+         <code>.env</code>. Así las columnas JSON, los <code>ENUM</code>, las colaciones y el
+         modo estricto se comportan como en producción.
+         <code>MigrationsTest</code> falla si alguien vuelve a sqlite.</p>
+    </div>
+    <div class="card">
+      <h4>Qué se puede falsear</h4>
+      <p>Solo lo que sale de la máquina: HTTP externo (<code>MockHandler</code>,
+         <code>Http::fake()</code>) y el LLM. <b>Nunca</b> un repositorio ni un Service —
+         mockear lo que estás probando es como una suite en verde esconde una funcionalidad
+         rota.</p>
+    </div>
+  </div>
+
+  <p>Redis, la red y las credenciales del LLM se quedan fuera: caché en array, cola
+     <code>sync</code>, mailer en array.</p>
+</div>
+</section>
+
+<section id="trabajo">
+<div class="wrap">
+  <h2><span class="n">09</span> Cómo se trabaja</h2>
+  <p>Todo cambio —funcionalidad, arreglo o investigación— empieza por una spec y termina por
+     documentación al día.</p>
+
+<pre>  <b>Fase 0</b>   context.md   <em>análisis; se lee el código antes de proponer nada</em>
+              │  ← el usuario aprueba
+  <b>Fase 0b</b>  plan.md      <em>qué fichero se toca y para qué</em>
+              │  ← el usuario aprueba
+  <b>Fase 1</b>   implementar  <em>dev y tester en paralelo</em>
+              ▼
+  <b>Fase 2</b>   pruebas      <em>si fallan, no se pasa de aquí</em>
+              ▼
+  <b>Fase 3</b>   QA           <em>revisor de solo lectura + pint</em>
+              ▼
+  <b>Fase 4</b>   simplificar  <em>y volver a pasar las pruebas</em>
+              ▼
+  <b>Fase 5</b>   guide.md  +  <u>sincronizar documentación</u>
+                             <em>incluidos estos dos canvas</em></pre>
+
+  <p>Las specs se escriben en español y viven en <code>spec/AAAA-MM-DD-{tipo}-{caso}/</code>,
+     fuera de git. El detalle está en <code>CLAUDE.md</code>; las reglas de código, en
+     <code>.ai/ai-guidelines.md</code>.</p>
+
+  <div class="card purple">
+    <h4>La última casilla</h4>
+    <p>Un cambio no está terminado hasta que <a href="project-map.html">Mapa del
+       proyecto</a> y este canvas siguen diciendo la verdad. Una documentación que
+       contradice al código es peor que no tenerla: se confía en ella y está mal.</p>
+  </div>
+</div>
+</section>
+
+<footer><div class="wrap">
+  Marketing AI Manager · <a href="project-map.html">← Mapa del proyecto</a>
+</div></footer>
+
+</body>
+</html>
