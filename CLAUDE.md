@@ -294,22 +294,42 @@ rather than pretending it does not exist.
 When a finding contradicts an established project standard, the standard wins —
 and that is a signal the reviewer's instructions may need updating.
 
-## Feedback on standards is permanent — save it to memory
+## Feedback is permanent — write it to memory in the same turn
 
-When the user corrects a practice — a test that should have been written
-differently, a pattern to stop using, a convention they prefer — that correction
-outlives the session. Two things happen, both mandatory:
+This project learns. When the user corrects something, that correction is
+recorded **before you continue with the task** — not at the end of the session,
+and without asking permission first.
 
-1. **Write it into the standard.** Cross-cutting rules about how agents write
-   code → `.ai/ai-guidelines.md`. Testing feedback → `.ai/test-guidelines.md`.
-   Structure, layering, or pattern feedback → `docs/ARCHITECTURE.md` (and
-   re-copy to `.ai/ARCHITECTURE.md`). Workflow feedback → this file.
-2. **Save it to memory** as a `feedback` entry, with the **why** and how to apply
-   it. The memory entry is what prevents the same mistake in a session that
-   starts before the file is read.
+**What counts as feedback.** Any of these, however casually phrased:
 
-This applies to every correction about *how we work*, not just big ones. A
-one-line rule the user had to state twice is a rule that was never recorded the
+- A correction: "no hagas X", "eso está mal", "así no".
+- A rejected tool, library or approach ("a la verga con Larastan").
+- A stated preference about style, length, language or workflow.
+- A convention imposed ("todo el backend debe seguir el patrón modular").
+- Something you got wrong that they had to point out — especially if it is the
+  second time.
+
+**Where it goes.** Two places, both mandatory:
+
+1. **Memory** — `~/.claude/projects/-Users-manuel-alzate-Documents-personal-projects-marketing-ai-manager/memory/`,
+   one file per fact, `type: feedback`, with a **Why:** and a **How to apply:**,
+   plus its one-line entry in `MEMORY.md`. This is the part that survives a
+   `/clear`; the repo files do not get read before the first mistake of a new
+   session.
+2. **The standard it belongs to** — cross-cutting code rules →
+   `.ai/ai-guidelines.md` · testing → `.ai/test-guidelines.md` · structure,
+   layering, patterns → `docs/ARCHITECTURE.md` (re-copy to `.ai/ARCHITECTURE.md`)
+   · backend patterns → the `marketing-backend-ddd` skill and
+   `guidelines/backend_guidelines.md` · workflow → this file.
+
+Memory carries the *rule and its why*; the standard carries the *detail*. A rule
+that only lives in one of the two will be broken.
+
+**Check memory before repeating a past mistake.** Recalled entries reflect what
+was true when written — if one names a file, flag or command, verify it still
+exists before acting on it.
+
+A one-line rule the user had to state twice is a rule that was never recorded the
 first time.
 
 # Documentation sync — once, at the end

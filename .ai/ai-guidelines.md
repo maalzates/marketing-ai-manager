@@ -98,6 +98,13 @@ about brace placement in review.
 - New third-party credentials go in `src/.env` and are referenced through
   `config/services.php`.
 
+## Feedback becomes a rule, immediately
+
+A correction from the user is recorded in the same turn: a `feedback` entry in
+the project's memory directory **and** the standard it belongs to. Writing memory
+is the main thread's job — a subagent's report does not persist. Details and the
+trigger list: the *Feedback is permanent* section of [`../CLAUDE.md`](../CLAUDE.md).
+
 ## When a standard is wrong
 
 Say so and propose the change to the document, in the same delivery. Do not
