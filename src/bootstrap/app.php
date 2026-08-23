@@ -1,6 +1,8 @@
 <?php
 
 use App\Modules\Core\Domain\Exceptions\ApiException;
+use App\Modules\Core\Presentation\Http\Middleware\EnsureAccountContext;
+use App\Modules\Core\Presentation\Http\Middleware\EnsureRole;
 use App\Modules\Core\Presentation\Http\Responses\ExceptionRenderer;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -17,7 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'account' => EnsureAccountContext::class,
+            'role' => EnsureRole::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

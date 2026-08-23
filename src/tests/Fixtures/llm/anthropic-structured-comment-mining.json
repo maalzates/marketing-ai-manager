@@ -1,0 +1,21 @@
+{
+  "id": "msg_01PmQ7bTk9WcFhJr2nXsVdLe",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-haiku-4-5",
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"ideas\":[{\"topic_index\":0,\"strategy_id\":999,\"title\":\"Que software de edicion usamos para los reels\",\"body\":\"Tres personas distintas preguntaron por el software de edicion en los comentarios del competidor. Un reel corto mostrando el stack responde la duda y aprovecha la demanda ya expresada.\",\"score\":0.82}]}"
+    }
+  ],
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "stop_details": null,
+  "usage": {
+    "input_tokens": 318,
+    "output_tokens": 96,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0
+  }
+}

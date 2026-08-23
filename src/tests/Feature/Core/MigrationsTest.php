@@ -20,7 +20,10 @@ class MigrationsTest extends TestCase
     public function test_the_suite_runs_against_the_mysql_testing_schema(): void
     {
         $this->assertSame('mysql', DB::connection()->getDriverName());
-        $this->assertSame('marketing_ai_testing', DB::connection()->getDatabaseName());
+
+        // A suffix is allowed so concurrent suites can each own a schema; the prefix is
+        // what proves nobody pointed the suite at a scratch database — or at sqlite.
+        $this->assertStringStartsWith('marketing_ai_testing', DB::connection()->getDatabaseName());
     }
 
     public function test_the_migrations_build_the_schema(): void

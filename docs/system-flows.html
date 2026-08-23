@@ -43,20 +43,68 @@
      programados y —en el futuro— un servidor MCP son <b>adaptadores de entrada</b>: puertas
      finas que traducen su formato a un DTO y llaman al mismo Service.</p>
 
-<pre>  petición HTTP      tool_use del chat      job programado       llamada MCP <em>(futuro)</em>
-        │                   │                     │                    │
-        ▼                   ▼                     ▼                    ▼
-   FormRequest          clase Tool            clase Job          handler Mcp
-   valida + toDTO()     valida + DTO          construye DTO      reusa las tools
-        │                   │                     │                    │
-        ▼                   ▼                     ▼                    ▼
-   Controller ──────────────┴──→ <b>Service</b> ←──────┴────────────────────┘
-                                    │
-                                    ▼
-                        Repository  /  ApiClient      <em>las únicas capas que tocan</em>
-                                    │                 <em>Eloquent o HTTP saliente</em>
-                                    ▼
-                             Model  /  API externa</pre>
+  <figure>
+  <svg viewBox="0 0 1080 430" role="img" aria-label="Cuatro puertas convergen en la capa de Services">
+    <text class="t-cap" x="0" y="12">Puertas · driving adapters</text>
+
+    <rect class="box box-blue" x="0" y="24" width="240" height="76" rx="10"/>
+    <text class="t-title" x="120" y="50" text-anchor="middle">Petición HTTP</text>
+    <text class="t-mono" x="120" y="70" text-anchor="middle">FormRequest</text>
+    <text class="t-mono" x="120" y="87" text-anchor="middle">valida + toDTO()</text>
+
+    <rect class="box box-purple" x="280" y="24" width="240" height="76" rx="10"/>
+    <text class="t-title" x="400" y="50" text-anchor="middle">tool_use del chat</text>
+    <text class="t-mono" x="400" y="70" text-anchor="middle">clase Tool</text>
+    <text class="t-mono" x="400" y="87" text-anchor="middle">valida contra el schema</text>
+
+    <rect class="box box-amber" x="560" y="24" width="240" height="76" rx="10"/>
+    <text class="t-title" x="680" y="50" text-anchor="middle">Job programado</text>
+    <text class="t-mono" x="680" y="70" text-anchor="middle">clase Job</text>
+    <text class="t-mono" x="680" y="87" text-anchor="middle">construye el DTO</text>
+
+    <rect class="box" x="840" y="24" width="240" height="76" rx="10" stroke-dasharray="5 4"/>
+    <text class="t-title" x="960" y="50" text-anchor="middle" fill="#7b8ba3">Llamada MCP</text>
+    <text class="t-mono" x="960" y="70" text-anchor="middle">futuro</text>
+    <text class="t-mono" x="960" y="87" text-anchor="middle">reusa las tools</text>
+
+    <path class="edge-strong" d="M120 100 L120 140"/>
+    <path class="edge-strong" d="M400 100 L400 140"/>
+    <path class="edge-strong" d="M680 100 L680 140"/>
+    <path class="edge-soft" d="M960 100 L960 140"/>
+    <path class="edge-strong" d="M120 140 L960 140"/>
+    <path class="edge-strong" d="M540 140 L540 176" marker-end="url(#d3)"/>
+
+    <rect class="box box-green" x="240" y="176" width="600" height="72" rx="10"/>
+    <text class="t-title" x="540" y="204" text-anchor="middle">Service</text>
+    <text class="t-label" x="540" y="226" text-anchor="middle">la lógica de negocio y TODOS los invariantes</text>
+    <text class="t-sub" x="820" y="200" text-anchor="end">Application/Services</text>
+
+    <path class="edge" d="M420 248 L420 292" marker-end="url(#d2)"/>
+    <path class="edge" d="M660 248 L660 292" marker-end="url(#d2)"/>
+
+    <rect class="box box-surface" x="240" y="292" width="360" height="62" rx="10"/>
+    <text class="t-title" x="420" y="318" text-anchor="middle">Repository</text>
+    <text class="t-mono" x="420" y="336" text-anchor="middle">lo único que toca Eloquent</text>
+
+    <rect class="box box-surface" x="640" y="292" width="360" height="62" rx="10"/>
+    <text class="t-title" x="820" y="318" text-anchor="middle">ApiClient</text>
+    <text class="t-mono" x="820" y="336" text-anchor="middle">lo único que hace HTTP saliente</text>
+
+    <path class="edge" d="M420 354 L420 384" marker-end="url(#d2)"/>
+    <path class="edge" d="M820 354 L820 384" marker-end="url(#d2)"/>
+    <text class="t-mono" x="420" y="404" text-anchor="middle">MySQL</text>
+    <text class="t-mono" x="820" y="404" text-anchor="middle">proveedor externo</text>
+
+    <defs>
+      <marker id="d2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#c6d2e2"/></marker>
+      <marker id="d3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+    </defs>
+  </svg>
+  <figcaption>La capa de Services es el único punto de convergencia. Añadir una puerta nueva
+    no duplica ni una regla.</figcaption>
+  </figure>
 
   <div class="split3">
     <div class="card blue">
@@ -84,23 +132,28 @@
   <p>Un módulo es un trozo acotado del dominio y expone al resto de la aplicación una sola
      cosa: un Service.</p>
 
-<pre>app/Modules/{Módulo}/
-├── <b>Application/</b>
-│   ├── DTO/                 <em>readonly; viajan Puerta → Service → Repository</em>
-│   └── Services/            <em>readonly; AQUÍ vive la lógica de negocio</em>
-├── <b>Domain/</b>
-│   ├── Contracts/           <em>interfaces de repositorios y clientes</em>
-│   ├── Enums/
-│   └── Exceptions/          <em>extienden ApiException / ClientException de Core</em>
-├── <b>Infrastructure/</b>
-│   ├── Persistence/         <em>modelos Eloquent</em>
-│   ├── Repositories/        <em>readonly; lo único que habla con la base de datos</em>
-│   └── Clients/             <em>clientes de APIs externas</em>
-├── <b>Presentation/</b>            <em>las puertas</em>
-│   ├── Http/{Controllers,Requests}
-│   ├── Tools/               <em>herramientas del asistente</em>
-│   └── Jobs/                <em>entradas encoladas y programadas</em>
-└── {Módulo}ServiceProvider.php</pre>
+  <div class="stack">
+    <div class="layer">
+      <div class="name">Presentation <span>Http · Tools · Jobs</span></div>
+      <div class="desc">Las puertas. Validan, construyen el DTO, delegan. Nunca tocan
+        Eloquent, nunca capturan excepciones, nunca contienen una regla.</div>
+    </div>
+    <div class="layer">
+      <div class="name">Application <span>DTO · Services</span></div>
+      <div class="desc">Aquí vive la lógica de negocio. <code>readonly</code>. Dependen de
+        contratos, no de implementaciones. No saben nada de HTTP.</div>
+    </div>
+    <div class="layer">
+      <div class="name">Domain <span>Contracts · Enums · Exceptions</span></div>
+      <div class="desc">Las interfaces de repositorios y clientes, y las excepciones propias
+        del dominio, que extienden las de Core.</div>
+    </div>
+    <div class="layer">
+      <div class="name">Infrastructure <span>Persistence · Repositories · Clients</span></div>
+      <div class="desc">Modelos Eloquent, repositorios <code>readonly</code> y clientes de
+        APIs externas. Los dos únicos sitios del sistema con <code>try</code>/<code>catch</code>.</div>
+    </div>
+  </div>
 
   <table>
     <tr><th>Capa</th><th>Puede depender de</th><th>Nunca</th></tr>
@@ -114,9 +167,8 @@
   <div class="card amber">
     <h4>Entre módulos</h4>
     <p>Un módulo puede depender del <b>Service</b> de otro. Nunca de su repositorio, su
-       modelo ni su cliente. Alcanzar
-       <code>App\Modules\Otro\Infrastructure\…</code> es como un monolito modular se
-       convierte en un monolito normal con carpetas de más.</p>
+       modelo ni su cliente. Alcanzar <code>App\Modules\Otro\Infrastructure\…</code> es como
+       un monolito modular se convierte en un monolito normal con carpetas de más.</p>
   </div>
 </div>
 </section>
@@ -125,38 +177,46 @@
 <div class="wrap">
   <h2><span class="n">03</span> Una petición, de punta a punta</h2>
 
-  <ol class="steps">
-    <li><b>nginx</b> recibe. <code>/api/*</code> y los ficheros de <code>public/</code> los
-        resuelve él; todo lo demás va a php-fpm.</li>
-    <li><b>Ruta.</b> <code>routes/api.php</code> para JSON. <code>routes/web.php</code> es un
-        único catch-all que sirve <code>app.blade.php</code>: a partir de ahí manda el router
-        de Vue.</li>
-    <li><b>FormRequest.</b> <code>prepareForValidation()</code> transforma,
-        <code>rules()</code> valida, <code>toDTO()</code> mapea. Un <code>toDTO()</code> que
-        transforma es un bug.</li>
-    <li><b>Controller.</b> Una línea: pasa el DTO al Service y envuelve lo que vuelva en
-        <code>$this->response</code>.</li>
-    <li><b>Service.</b> Las reglas. Comprueba, orquesta, y lanza excepciones de dominio con
-        <code>?? throw</code>.</li>
-    <li><b>Repository.</b> La consulta, siempre filtrada por <code>account_id</code>.
-        Devuelve <code>Collection</code>, <code>Model</code> o
-        <code>LengthAwarePaginator</code>. Nunca un array.</li>
-    <li><b>Respuesta.</b> Un único envoltorio, para acierto y para error.</li>
-  </ol>
+  <div class="pipeline">
+    <div class="step"><h5>nginx</h5><p>Assets y <code>/api/*</code>; el resto a php-fpm</p></div>
+    <div class="step"><h5>Ruta</h5><p><code>api.php</code> para JSON; <code>web.php</code> es un catch-all para la SPA</p></div>
+    <div class="step"><h5>FormRequest</h5><p>transforma, valida, mapea a DTO</p></div>
+    <div class="step"><h5>Controller</h5><p>una línea: pasa el DTO y envuelve la respuesta</p></div>
+  </div>
+  <div class="pipeline">
+    <div class="step"><h5>Service</h5><p>las reglas; <code>?? throw</code> para las guardas</p></div>
+    <div class="step"><h5>Repository</h5><p>la consulta, filtrada por <code>account_id</code></p></div>
+    <div class="step"><h5>MySQL</h5><p>devuelve <code>Collection</code> o <code>Model</code>, nunca un array</p></div>
+    <div class="step"><h5>Envoltorio</h5><p>una sola forma, para acierto y para error</p></div>
+  </div>
 
-<pre><i>{ "result": { "id": "camp_1" }, "errors": [] }</i>
+  <h3>El envoltorio</h3>
+  <div class="split">
+    <div class="card green">
+      <h4>Acierto</h4>
+      <pre style="margin:0">{ "result": { "id": "camp_1" },
+  "errors": [] }</pre>
+    </div>
+    <div class="card red">
+      <h4>Error</h4>
+      <pre style="margin:0">{ "result": [],
+  "errors": { "message": "Campaign not found",
+              "status_code": 404 } }</pre>
+    </div>
+  </div>
+  <p>En un fallo de validación se añade <code>errors.fields</code> con los mensajes por
+     campo.</p>
 
-<s>{ "result": [], "errors": { "message": "Campaign not found", "status_code": 404 } }</s>
-
-<em>en un fallo de validación, además:</em>
-<s>{ "result": [], "errors": { "message": "…", "status_code": 422,
-                            "fields": { "name": ["The name field is required."] } } }</s></pre>
-
-  <p>En el frontend, el flujo es el espejo:
-     <code>Componente → Store → Repository → axios → /api</code>. Los repositorios
-     desenvuelven <code>data.result</code>; el interceptor de <code>bootstrap.js</code>
-     aplana el error a un único <code>Error</code> con <code>status</code> y
-     <code>errors</code>. axios solo se toca en los repositorios.</p>
+  <h3>El espejo en el frontend</h3>
+  <div class="pipeline">
+    <div class="step"><h5>Componente</h5><p>renderiza; no decide</p></div>
+    <div class="step"><h5>Store · Pinia</h5><p>estado y avisos al usuario</p></div>
+    <div class="step"><h5>Repository</h5><p>el único sitio con axios</p></div>
+    <div class="step"><h5>/api</h5><p>desenvuelve <code>data.result</code></p></div>
+  </div>
+  <p>El interceptor de <code>bootstrap.js</code> aplana el lado de error a un único
+     <code>Error</code> con <code>status</code> y <code>errors</code>, así que el
+     componente nunca ve dos formas distintas de fallo.</p>
 </div>
 </section>
 
@@ -164,59 +224,60 @@
 <div class="wrap">
   <h2><span class="n">04</span> Errores y logs — una sola línea por fallo</h2>
 
-<pre>  Repository / Client            <em>los ÚNICOS dos sitios con try/catch</em>
-        │
-        │  throw CampaignCreationFailedException::wrap($e, context: [...])
-        ▼
-  Service                        <em>no captura — deja pasar</em>
-        │
-        ▼
-  Controller                     <em>no captura — deja pasar</em>
-        │
-        ▼
-  ┌────────────────────────────────────────────────────────┐
-  │  <b>bootstrap/app.php</b>                                    │
-  │                                                        │
-  │  report()  → Log::log( <u>$e->getLogLevel()</u> ,             │
-  │                        $e->getMessage(),               │
-  │                        $e->getContext() )              │
-  │                                                        │
-  │  render()  → <b>ExceptionRenderer</b>  →  envoltorio de error │
-  └────────────────────────────────────────────────────────┘</pre>
+  <figure>
+  <svg viewBox="0 0 1080 400" role="img" aria-label="Camino de una excepción hasta el log y la respuesta">
+    <rect class="box box-surface" x="60" y="0" width="300" height="66" rx="10"/>
+    <text class="t-title" x="210" y="26" text-anchor="middle">Repository / Client</text>
+    <text class="t-mono" x="210" y="46" text-anchor="middle">los ÚNICOS dos sitios</text>
+    <text class="t-mono" x="210" y="60" text-anchor="middle">con try / catch</text>
 
-  <div class="split">
-    <div class="card">
-      <h4>La excepción decide su nivel</h4>
-      <table style="margin:0">
-        <tr><th>Status</th><th>Nivel</th></tr>
-        <tr><td>400, 422</td><td><code>info</code></td></tr>
-        <tr><td>resto de 4xx</td><td><code>warning</code></td></tr>
-        <tr><td>5xx</td><td><code>error</code></td></tr>
-      </table>
-      <p style="margin-top:10px">Un código fuera del rango HTTP (un driver de MySQL lanza
-         <code>1045</code>) se normaliza a 500.</p>
-    </div>
-    <div class="card">
-      <h4>Qué se le devuelve al llamante</h4>
-      <ul>
-        <li><code>ClientException</code> — su <code>clientMessage</code> y sus
-            <code>extras</code>. Es culpa del llamante y puede arreglarlo.</li>
-        <li><code>ApiException</code> — su mensaje, que siempre lo ha escrito una persona.</li>
-        <li>Cualquier otra — mensaje genérico, salvo con <code>APP_DEBUG</code>.</li>
-      </ul>
-    </div>
-  </div>
+    <path class="edge-strong" d="M210 66 L210 112" marker-end="url(#e3)"/>
+    <text class="t-mono" x="224" y="94">throw …Exception::wrap($e, context: […])</text>
 
-  <div class="card red">
-    <h4>Nadie llama a <code>Log::</code> a mano</h4>
-    <p>Loguear <i>y</i> lanzar produce dos entradas del mismo fallo, con dos niveles y dos
-       formas, y la manual se escribe aunque la excepción se acabe manejando más arriba. El
-       detalle crudo del proveedor va en <code>context</code>, que solo llega a los logs;
-       nunca al cuerpo de la respuesta.</p>
-  </div>
+    <rect class="box" x="60" y="112" width="300" height="46" rx="10"/>
+    <text class="t-label" x="210" y="140" text-anchor="middle">Service — no captura</text>
 
-  <p><code>ExceptionRenderer</code> cubre también lo que lanza Laravel —validación, auth, un
-     404 del router— así que el frontend nunca se encuentra dos formas distintas de error.</p>
+    <path class="edge-strong" d="M210 158 L210 186" marker-end="url(#e3)"/>
+
+    <rect class="box" x="60" y="186" width="300" height="46" rx="10"/>
+    <text class="t-label" x="210" y="214" text-anchor="middle">Controller — no captura</text>
+
+    <path class="edge-strong" d="M210 232 L210 264" marker-end="url(#e3)"/>
+
+    <rect class="box box-blue" x="60" y="264" width="300" height="66" rx="10"/>
+    <text class="t-title" x="210" y="290" text-anchor="middle">bootstrap/app.php</text>
+    <text class="t-mono" x="210" y="310" text-anchor="middle">report() + render()</text>
+
+    <path class="edge" d="M360 288 L440 288 L440 96 L510 96" marker-end="url(#e2)"/>
+    <path class="edge" d="M360 306 L470 306 L470 236 L510 236" marker-end="url(#e2)"/>
+
+    <rect class="box box-amber" x="510" y="40" width="510" height="112" rx="10"/>
+    <text class="t-title" x="530" y="66">report() → una línea de log</text>
+    <text class="t-mono" x="530" y="90">Log::log( $e-&gt;getLogLevel(), $e-&gt;getMessage(), $e-&gt;getContext() )</text>
+    <text class="t-label" x="530" y="116">400 y 422 → info · resto de 4xx → warning · 5xx → error</text>
+    <text class="t-label" x="530" y="138">el detalle crudo del proveedor vive aquí, y solo aquí</text>
+
+    <rect class="box box-green" x="510" y="180" width="510" height="112" rx="10"/>
+    <text class="t-title" x="530" y="206">render() → ExceptionRenderer</text>
+    <text class="t-label" x="530" y="230">ClientException → su clientMessage y sus extras</text>
+    <text class="t-label" x="530" y="252">ApiException → su mensaje, escrito siempre por una persona</text>
+    <text class="t-label" x="530" y="274">cualquier otra → mensaje genérico, salvo con APP_DEBUG</text>
+
+    <rect class="box box-red" x="510" y="316" width="510" height="60" rx="10"/>
+    <text class="t-title" x="765" y="342" text-anchor="middle" fill="#c02a37">Nadie llama a Log:: a mano</text>
+    <text class="t-label" x="765" y="362" text-anchor="middle">loguear y lanzar registra el mismo fallo dos veces, con dos niveles</text>
+
+    <defs>
+      <marker id="e2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#c6d2e2"/></marker>
+      <marker id="e3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+    </defs>
+  </svg>
+  <figcaption>Un código fuera del rango HTTP —un driver de MySQL lanza <code>1045</code>— se
+    normaliza a 500. <code>ExceptionRenderer</code> cubre también lo que lanza Laravel:
+    validación, auth, un 404 del router.</figcaption>
+  </figure>
 </div>
 </section>
 
@@ -225,32 +286,58 @@
   <h2><span class="n">05</span> Llamar a una API externa</h2>
   <p>YouTube, Instagram Graph, Meta Marketing, Apify, el LLM. Todas siguen la misma forma.</p>
 
-<pre>  Service
-     │  $this->client->getChannel($id)
-     ▼
-  <b>YoutubeClient</b> extends ApiClientAbstract      <em>endpoints como constantes</em>
-     │
-     │  catch (ApiCallFailedException) → throw YoutubeClientException::from…
-     ▼
-  <b>ApiClientAbstract</b>                            <em>verbos, JSON, traducción de errores</em>
-     │                                            <em>contexto: método, URI, opciones,</em>
-     ▼                                            <em>status y cuerpo decodificado</em>
-  <b>GuzzleClientFactory</b>                          <em>timeouts y cabeceras compartidos</em>
-     │
-     ▼
-  proveedor</pre>
+  <figure>
+  <svg viewBox="0 0 1080 250" role="img" aria-label="Cadena de una llamada saliente">
+    <rect class="box box-green" x="0" y="30" width="180" height="62" rx="10"/>
+    <text class="t-title" x="90" y="58" text-anchor="middle">Service</text>
+    <text class="t-mono" x="90" y="76" text-anchor="middle">pide el dato</text>
+
+    <path class="edge-strong" d="M180 61 L228 61" marker-end="url(#f3)"/>
+
+    <rect class="box box-purple" x="228" y="30" width="220" height="62" rx="10"/>
+    <text class="t-title" x="338" y="54" text-anchor="middle">YoutubeClient</text>
+    <text class="t-mono" x="338" y="72" text-anchor="middle">endpoints como constantes</text>
+
+    <path class="edge-strong" d="M448 61 L496 61" marker-end="url(#f3)"/>
+
+    <rect class="box box-blue" x="496" y="30" width="240" height="62" rx="10"/>
+    <text class="t-title" x="616" y="54" text-anchor="middle">ApiClientAbstract</text>
+    <text class="t-mono" x="616" y="72" text-anchor="middle">verbos · JSON · errores</text>
+
+    <path class="edge-strong" d="M736 61 L784 61" marker-end="url(#f3)"/>
+
+    <rect class="box box-surface" x="784" y="30" width="296" height="62" rx="10"/>
+    <text class="t-title" x="932" y="54" text-anchor="middle">GuzzleClientFactory</text>
+    <text class="t-mono" x="932" y="72" text-anchor="middle">timeouts y cabeceras compartidos</text>
+
+    <path class="edge-red" d="M616 92 L616 140" marker-end="url(#f4)"/>
+    <text class="t-mono" x="630" y="120" fill="#c02a37">falla</text>
+
+    <rect class="box box-red" x="330" y="140" width="572" height="86" rx="10"/>
+    <text class="t-title" x="350" y="166" fill="#c02a37">ApiCallFailedException</text>
+    <text class="t-label" x="350" y="188">context: método · URI · opciones · status · cuerpo decodificado</text>
+    <text class="t-label" x="350" y="210">el cliente la traduce a su excepción de dominio y la deja subir</text>
+
+    <defs>
+      <marker id="f3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+      <marker id="f4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#c02a37"/></marker>
+    </defs>
+  </svg>
+  </figure>
 
   <h3>Dos tipos de credencial, dos mecanismos</h3>
   <table>
     <tr><th>Tipo</th><th>Identifica a</th><th>De dónde sale</th><th>Cómo se liga</th></tr>
     <tr>
-      <td><b>Plataforma</b><br><span class="tag blue">OAuth client, App id, DB</span></td>
+      <td><b>Plataforma</b><br><span class="tag blue">OAuth client · App id · DB</span></td>
       <td>la aplicación</td>
       <td><code>config/services.php</code> leyendo <code>env()</code></td>
       <td>singleton en el provider del módulo</td>
     </tr>
     <tr>
-      <td><b>Cuenta · BYOK</b><br><span class="tag purple">Apify, LLM, tokens del usuario</span></td>
+      <td><b>Cuenta · BYOK</b><br><span class="tag purple">Apify · LLM · tokens del usuario</span></td>
       <td>el usuario</td>
       <td>cifradas en las integraciones de la cuenta</td>
       <td><code>*ClientFactory-&gt;forAccount($id)</code>, por petición o job</td>
@@ -274,24 +361,55 @@
   <h2><span class="n">06</span> El asistente propone, la persona ejecuta</h2>
   <p>El invariante más importante del sistema, y está en la arquitectura, no en el prompt.</p>
 
-<pre>  el LLM pide una mutación
-        │
-        ▼
-  <b>PauseCampaignTool</b>                    <em>una tool de mutación</em>
-        │
-        │  <s>NO existe camino de código de aquí al Service que ejecuta</s>
-        ▼
-  <b>ProposalService::create()</b>            <em>persiste una Proposal y la devuelve</em>
-        │
-        ▼
-  la propuesta aparece en la interfaz
-        │
-        │  la persona pulsa aceptar
-        ▼
-  <b>POST /api/v1/proposals/{id}/accept</b>    <em>puerta HTTP que el LLM no conoce</em>
-        │
-        ▼
-  <b>CampaignPauseService</b>                 <em>ahora sí, ejecuta</em></pre>
+  <figure>
+  <svg viewBox="0 0 1080 330" role="img" aria-label="Una mutación pasa por una propuesta y una aprobación humana">
+    <text class="t-cap" x="0" y="12">Lo que puede hacer el LLM</text>
+    <text class="t-cap" x="620" y="12">Lo que solo puede hacer una persona</text>
+    <line x1="540" y1="24" x2="540" y2="310" stroke="#dfe6f0" stroke-width="1.5" stroke-dasharray="6 5"/>
+
+    <rect class="box box-purple" x="0" y="34" width="230" height="62" rx="10"/>
+    <text class="t-title" x="115" y="60" text-anchor="middle">PauseCampaignTool</text>
+    <text class="t-mono" x="115" y="78" text-anchor="middle">tool de mutación</text>
+
+    <path class="edge-strong" d="M230 65 L286 65" marker-end="url(#g3)"/>
+
+    <rect class="box box-blue" x="286" y="34" width="230" height="62" rx="10"/>
+    <text class="t-title" x="401" y="60" text-anchor="middle">ProposalService</text>
+    <text class="t-mono" x="401" y="78" text-anchor="middle">persiste una Proposal</text>
+
+    <path class="edge" d="M401 96 L401 146 L620 146" marker-end="url(#g2)"/>
+
+    <rect class="box box-amber" x="620" y="118" width="240" height="56" rx="10"/>
+    <text class="t-title" x="740" y="143" text-anchor="middle">La propuesta en la interfaz</text>
+    <text class="t-mono" x="740" y="161" text-anchor="middle">el usuario decide</text>
+
+    <path class="edge-strong" d="M740 174 L740 196" marker-end="url(#g3)"/>
+    <text class="t-mono" x="752" y="190">pulsa aceptar</text>
+
+    <rect class="box box-green" x="620" y="196" width="240" height="56" rx="10"/>
+    <text class="t-title" x="740" y="219" text-anchor="middle">POST /proposals/{id}/accept</text>
+    <text class="t-mono" x="740" y="238" text-anchor="middle">puerta que el LLM no conoce</text>
+
+    <path class="edge-strong" d="M740 252 L740 282" marker-end="url(#g3)"/>
+    <rect class="box box-green" x="620" y="282" width="240" height="44" rx="10"/>
+    <text class="t-title" x="740" y="310" text-anchor="middle">CampaignPauseService</text>
+
+    <path class="edge-red" d="M115 96 L115 300 L345 300"/>
+    <circle cx="360" cy="300" r="15" fill="#fef1f2" stroke="#c02a37" stroke-width="1.5"/>
+    <path d="M353 293 L367 307 M367 293 L353 307" stroke="#c02a37" stroke-width="1.8"/>
+    <text class="t-label" x="386" y="296" fill="#c02a37">No existe camino de código</text>
+    <text class="t-label" x="386" y="312" fill="#c02a37">de una tool al Service que ejecuta</text>
+
+    <defs>
+      <marker id="g2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#c6d2e2"/></marker>
+      <marker id="g3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+    </defs>
+  </svg>
+  <figcaption>Las tools de lectura sí ejecutan directamente: consultar métricas o listar
+    campañas no cambia nada ni cuesta dinero.</figcaption>
+  </figure>
 
   <div class="split">
     <div class="card green">
@@ -307,9 +425,6 @@
          una versión aceptable de eso.</p>
     </div>
   </div>
-
-  <p>Las tools de lectura sí ejecutan directamente: consultar métricas o listar campañas no
-     cambia nada ni cuesta dinero.</p>
 </div>
 </section>
 
@@ -319,20 +434,14 @@
   <p>La aplicación es multi-cuenta desde el primer día, así que no hay un «luego lo
      añadimos».</p>
 
-<pre>  toda tabla de usuario lleva  <b>account_id</b>
-        │
-        ▼
-  la cuenta viaja en el <b>DTO</b>          <em>no en una variable global, no en la sesión</em>
-        │
-        ▼
-  el Repository <b>siempre</b> filtra
-        │
-        ▼
-  <i>-&gt;where('account_id', $filters-&gt;accountId)</i></pre>
+  <div class="pipeline">
+    <div class="step"><h5>Tabla</h5><p>toda tabla de usuario lleva <code>account_id</code></p></div>
+    <div class="step"><h5>DTO</h5><p>la cuenta viaja dentro; no en una global ni en la sesión</p></div>
+    <div class="step"><h5>Repository</h5><p><code>-&gt;where('account_id', …)</code>, siempre</p></div>
+    <div class="step"><h5>Prueba</h5><p>dos cuentas, y se afirma que no se ven entre sí</p></div>
+  </div>
 
-  <p>Ningún Service, Tool ni Job alcanza datos de otra cuenta. Las pruebas lo afirman
-     explícitamente: crear dos cuentas, pedir desde una, comprobar que lo de la otra no
-     aparece.</p>
+  <p>Ningún Service, Tool ni Job alcanza datos de otra cuenta.</p>
 </div>
 </section>
 
@@ -345,13 +454,37 @@
     <p>Toda prueba entra por una puerta real y recorre la cadena entera hasta MySQL.</p>
   </div>
 
-<pre>  petición HTTP   →  ruta  →  controller  →  service  →  repository  →  <b>MySQL</b>
-  job despachado  →  handler  →  service  →  repository  →  <b>MySQL</b>
-  comando artisan →  service  →  repository  →  <b>MySQL</b></pre>
+  <figure>
+  <svg viewBox="0 0 1080 210" role="img" aria-label="Las tres formas de entrar en una prueba">
+    <rect class="box box-blue" x="0" y="10" width="230" height="44" rx="9"/>
+    <text class="t-label" x="115" y="37" text-anchor="middle">petición HTTP</text>
+    <rect class="box box-amber" x="0" y="72" width="230" height="44" rx="9"/>
+    <text class="t-label" x="115" y="99" text-anchor="middle">job despachado</text>
+    <rect class="box box-purple" x="0" y="134" width="230" height="44" rx="9"/>
+    <text class="t-label" x="115" y="161" text-anchor="middle">comando de artisan</text>
 
-  <p>Un unit test con el repositorio mockeado afirma que un Service llamó a un método. Sigue
-     en verde con la consulta rota, la ruta sin registrar y el binding sin declarar — las
-     tres cosas que de verdad se rompen.</p>
+    <path class="edge" d="M230 32 L300 32 L300 94 L340 94" marker-end="url(#h2)"/>
+    <path class="edge" d="M230 94 L340 94"/>
+    <path class="edge" d="M230 156 L300 156 L300 94"/>
+
+    <rect class="box box-green" x="340" y="72" width="180" height="44" rx="9"/>
+    <text class="t-label" x="430" y="99" text-anchor="middle">Service</text>
+    <path class="edge" d="M520 94 L570 94" marker-end="url(#h2)"/>
+    <rect class="box box-green" x="570" y="72" width="180" height="44" rx="9"/>
+    <text class="t-label" x="660" y="99" text-anchor="middle">Repository</text>
+    <path class="edge" d="M750 94 L800 94" marker-end="url(#h2)"/>
+    <rect class="box box-amber" x="800" y="72" width="280" height="44" rx="9"/>
+    <text class="t-label" x="940" y="99" text-anchor="middle">MySQL · marketing_ai_testing</text>
+
+    <defs>
+      <marker id="h2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#c6d2e2"/></marker>
+    </defs>
+  </svg>
+  <figcaption>Un unit test con el repositorio mockeado afirma que un Service llamó a un
+    método. Sigue en verde con la consulta rota, la ruta sin registrar y el binding sin
+    declarar — las tres cosas que de verdad se rompen.</figcaption>
+  </figure>
 
   <div class="split">
     <div class="card">
@@ -359,8 +492,8 @@
       <p><code>phpunit.xml</code> solo sobrescribe <code>DB_DATABASE</code>
          (<code>marketing_ai_testing</code>); el resto de la conexión viene de
          <code>.env</code>. Así las columnas JSON, los <code>ENUM</code>, las colaciones y el
-         modo estricto se comportan como en producción.
-         <code>MigrationsTest</code> falla si alguien vuelve a sqlite.</p>
+         modo estricto se comportan como en producción. <code>MigrationsTest</code> falla si
+         alguien vuelve a sqlite.</p>
     </div>
     <div class="card">
       <h4>Qué se puede falsear</h4>
@@ -382,20 +515,60 @@
   <p>Todo cambio —funcionalidad, arreglo o investigación— empieza por una spec y termina por
      documentación al día.</p>
 
-<pre>  <b>Fase 0</b>   context.md   <em>análisis; se lee el código antes de proponer nada</em>
-              │  ← el usuario aprueba
-  <b>Fase 0b</b>  plan.md      <em>qué fichero se toca y para qué</em>
-              │  ← el usuario aprueba
-  <b>Fase 1</b>   implementar  <em>dev y tester en paralelo</em>
-              ▼
-  <b>Fase 2</b>   pruebas      <em>si fallan, no se pasa de aquí</em>
-              ▼
-  <b>Fase 3</b>   QA           <em>revisor de solo lectura + pint</em>
-              ▼
-  <b>Fase 4</b>   simplificar  <em>y volver a pasar las pruebas</em>
-              ▼
-  <b>Fase 5</b>   guide.md  +  <u>sincronizar documentación</u>
-                             <em>incluidos estos dos canvas</em></pre>
+  <figure>
+  <svg viewBox="0 0 1080 190" role="img" aria-label="Las fases del ciclo spec-driven">
+    <rect class="box box-blue" x="0" y="40" width="150" height="60" rx="9"/>
+    <text class="t-title" x="75" y="66" text-anchor="middle">Fase 0</text>
+    <text class="t-mono" x="75" y="84" text-anchor="middle">context.md</text>
+
+    <path class="edge-strong" d="M150 70 L192 70" marker-end="url(#i3)"/>
+    <text class="t-cap" x="171" y="34" text-anchor="middle">aprueba</text>
+
+    <rect class="box box-blue" x="192" y="40" width="150" height="60" rx="9"/>
+    <text class="t-title" x="267" y="66" text-anchor="middle">Fase 0b</text>
+    <text class="t-mono" x="267" y="84" text-anchor="middle">plan.md</text>
+
+    <path class="edge-strong" d="M342 70 L384 70" marker-end="url(#i3)"/>
+    <text class="t-cap" x="363" y="34" text-anchor="middle">aprueba</text>
+
+    <rect class="box box-green" x="384" y="40" width="150" height="60" rx="9"/>
+    <text class="t-title" x="459" y="66" text-anchor="middle">Fase 1</text>
+    <text class="t-mono" x="459" y="84" text-anchor="middle">implementar</text>
+
+    <path class="edge" d="M534 70 L576 70" marker-end="url(#i2)"/>
+
+    <rect class="box box-amber" x="576" y="40" width="150" height="60" rx="9"/>
+    <text class="t-title" x="651" y="66" text-anchor="middle">Fase 2</text>
+    <text class="t-mono" x="651" y="84" text-anchor="middle">pruebas</text>
+
+    <path class="edge" d="M726 70 L768 70" marker-end="url(#i2)"/>
+
+    <rect class="box box-amber" x="768" y="40" width="150" height="60" rx="9"/>
+    <text class="t-title" x="843" y="66" text-anchor="middle">Fase 3 · 4</text>
+    <text class="t-mono" x="843" y="84" text-anchor="middle">QA · simplificar</text>
+
+    <path class="edge" d="M918 70 L960 70" marker-end="url(#i2)"/>
+
+    <rect class="box box-purple" x="960" y="40" width="120" height="60" rx="9"/>
+    <text class="t-title" x="1020" y="66" text-anchor="middle">Fase 5</text>
+    <text class="t-mono" x="1020" y="84" text-anchor="middle">guide + docs</text>
+
+    <path class="edge-red" d="M651 100 L651 128 L459 128 L459 104" marker-end="url(#i4)"/>
+    <text class="t-label" x="555" y="146" text-anchor="middle" fill="#c02a37">si fallan, no se pasa de aquí</text>
+
+    <rect class="box box-purple" x="700" y="150" width="380" height="34" rx="8"/>
+    <text class="t-label" x="890" y="172" text-anchor="middle" fill="#6d3fd4">incluye actualizar los dos canvas</text>
+
+    <defs>
+      <marker id="i2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#c6d2e2"/></marker>
+      <marker id="i3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+      <marker id="i4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#c02a37"/></marker>
+    </defs>
+  </svg>
+  </figure>
 
   <p>Las specs se escriben en español y viven en <code>spec/AAAA-MM-DD-{tipo}-{caso}/</code>,
      fuera de git. El detalle está en <code>CLAUDE.md</code>; las reglas de código, en
@@ -403,9 +576,9 @@
 
   <div class="card purple">
     <h4>La última casilla</h4>
-    <p>Un cambio no está terminado hasta que <a href="project-map.html">Mapa del
-       proyecto</a> y este canvas siguen diciendo la verdad. Una documentación que
-       contradice al código es peor que no tenerla: se confía en ella y está mal.</p>
+    <p>Un cambio no está terminado hasta que <a href="project-map.html">Mapa del proyecto</a>
+       y este canvas siguen diciendo la verdad. Una documentación que contradice al código es
+       peor que no tenerla: se confía en ella y está mal.</p>
   </div>
 </div>
 </section>

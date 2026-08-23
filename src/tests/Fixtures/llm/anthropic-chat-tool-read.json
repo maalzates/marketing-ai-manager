@@ -1,0 +1,26 @@
+{
+  "id": "msg_01Rq7c221b40cw1t",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-sonnet-5",
+  "content": [
+    {
+      "type": "text",
+      "text": "Voy a revisar tus experimentos."
+    },
+    {
+      "type": "tool_use",
+      "id": "toolu_read001",
+      "name": "get_experiments",
+      "input": {"status": "running"}
+    }
+  ],
+  "stop_reason": "tool_use",
+  "stop_sequence": null,
+  "usage": {
+    "input_tokens": 512,
+    "output_tokens": 48,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0
+  }
+}

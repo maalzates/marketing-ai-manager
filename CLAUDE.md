@@ -328,6 +328,43 @@ exists before acting on it.
 A one-line rule the user had to state twice is a rule that was never recorded the
 first time.
 
+# Session handoff — at 80% of the context
+
+**When the context reaches ~80%, stop at the next clean point, write
+`spec/handoff.md`, and tell the user to `/clear` and start a fresh session.**
+
+A long session re-sends its whole history every turn: slow, expensive, and — the
+part that actually hurts — near the limit the context gets summarised and the
+operational detail is what goes first. What was tried and rejected, what is
+half-finished, what the user decided and why. A handoff written with room to
+spare puts that on disk, which is the only place it survives.
+
+There is no exact gauge for the percentage. Estimate it from how long the session
+has run and how much tool output has piled up, or from a warning the harness
+gives you. When unsure, earlier beats later — writing the handoff after the
+context is already full is writing it from a summary.
+
+`spec/handoff.md` is a single file, overwritten each time. `spec/` is gitignored,
+so it is a session artifact and never reaches the repo. Write it for someone who
+did not see the conversation:
+
+1. **What we were doing, and why.** The task in two sentences, plus the spec
+   folder it belongs to.
+2. **State.** Three lists: done, half-finished (with exactly where it stopped),
+   not started.
+3. **What is verified, and with which command.** `make test` → 20 passed. Not
+   "tests pass".
+4. **Files touched**, by path, with one line each on what changed.
+5. **User decisions made this session** that are not yet in memory or in the
+   docs — and if any belong in memory, write them there *now* rather than
+   leaving them in the handoff.
+6. **Next step**, concrete enough to start on without re-deriving it.
+7. **Exact commands to resume** — how to bring the stack up, which test to run
+   first.
+
+Then say plainly: the handoff is written, run `/clear`, and open the next session
+by reading `spec/handoff.md`.
+
 # Documentation sync — once, at the end
 
 **Keep the docs true, but sync them exactly once: at the end of the delivery.**

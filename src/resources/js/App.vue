@@ -1,9 +1,8 @@
 <script setup>
-import AppLayout from '@/layouts/AppLayout.vue';
+import ToastHost from '@/components/ToastHost.vue';
 </script>
 
 <template>
-    <AppLayout>
-        <RouterView />
-    </AppLayout>
+    <RouterView />
+    <ToastHost />
 </template>

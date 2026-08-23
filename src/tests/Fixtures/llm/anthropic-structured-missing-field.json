@@ -1,0 +1,21 @@
+{
+  "id": "msg_01XFDUDYJgAACzvnptvVoYEO",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-opus-5",
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"value\":\"Impulsar reservas de cenas entre semana\",\"alternatives\":[\"Aumentar el ticket medio\"]}"
+    }
+  ],
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "stop_details": null,
+  "usage": {
+    "input_tokens": 42,
+    "output_tokens": 24,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0
+  }
+}

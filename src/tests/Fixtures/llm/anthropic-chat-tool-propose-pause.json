@@ -1,0 +1,26 @@
+{
+  "id": "msg_01Zz4h908f21ka9p",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-sonnet-5",
+  "content": [
+    {
+      "type": "tool_use",
+      "id": "toolu_pause001",
+      "name": "propose_pause",
+      "input": {
+        "experiment_id": 1,
+        "title": "Pausar el experimento",
+        "rationale": "El CPA va muy por encima de lo esperado."
+      }
+    }
+  ],
+  "stop_reason": "tool_use",
+  "stop_sequence": null,
+  "usage": {
+    "input_tokens": 640,
+    "output_tokens": 71,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0
+  }
+}

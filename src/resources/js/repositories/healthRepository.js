@@ -1,5 +1,5 @@
-import axios from '@/bootstrap';
+import http from '@/repositories/client';
 
 export async function fetchHealth() {
-    return (await axios.get('/health')).data.result;
+    return (await http.get('/health')).data.result;
 }

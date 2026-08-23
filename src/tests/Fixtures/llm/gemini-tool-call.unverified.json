@@ -1,0 +1,30 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "role": "model",
+        "parts": [
+          {"text": "Let me check the weather."},
+          {
+            "functionCall": {
+              "name": "get_weather",
+              "args": {"location": "Boston, MA"}
+            }
+          }
+        ]
+      },
+      "finishReason": "STOP",
+      "safetyRatings": []
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 64,
+    "cachedContentTokenCount": 0,
+    "candidatesTokenCount": 18,
+    "totalTokenCount": 82,
+    "promptTokensDetails": [],
+    "cacheTokensDetails": [],
+    "candidatesTokensDetails": []
+  },
+  "modelVersion": "gemini-3.7-flash"
+}
