@@ -20,7 +20,7 @@ class ContentCalendarController extends ApiController
         parent::__construct();
     }
 
-    public function __invoke(CalendarRequest $request): JsonResponse
+    public function index(CalendarRequest $request): JsonResponse
     {
         $query = $request->toDTO();
 

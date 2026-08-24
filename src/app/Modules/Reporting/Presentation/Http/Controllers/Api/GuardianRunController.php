@@ -23,7 +23,7 @@ class GuardianRunController extends ApiController
         parent::__construct();
     }
 
-    public function __invoke(string $strategy): JsonResponse
+    public function store(string $strategy): JsonResponse
     {
         RunGuardianJob::dispatch(
             $this->context->accountId,

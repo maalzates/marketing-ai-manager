@@ -16,7 +16,7 @@ class UsageController extends ApiController
         parent::__construct();
     }
 
-    public function __invoke(IndexUsageRequest $request): JsonResponse
+    public function index(IndexUsageRequest $request): JsonResponse
     {
         return $this->response->success($this->service->summary($request->toDTO()));
     }

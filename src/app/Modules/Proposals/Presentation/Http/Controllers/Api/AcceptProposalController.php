@@ -21,7 +21,7 @@ class AcceptProposalController extends ApiController
         parent::__construct();
     }
 
-    public function __invoke(ProposalScopeRequest $request): JsonResponse
+    public function store(ProposalScopeRequest $request): JsonResponse
     {
         return $this->response->success($this->service->accept(
             $request->proposalId(),

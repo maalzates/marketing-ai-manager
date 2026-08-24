@@ -21,7 +21,7 @@ class ChatController extends ApiController
         parent::__construct();
     }
 
-    public function __invoke(SendChatMessageRequest $request): JsonResponse
+    public function store(SendChatMessageRequest $request): JsonResponse
     {
         return $this->response->success($this->service->send($request->toDTO()));
     }

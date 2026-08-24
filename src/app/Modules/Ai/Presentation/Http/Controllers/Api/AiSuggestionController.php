@@ -16,7 +16,7 @@ class AiSuggestionController extends ApiController
         parent::__construct();
     }
 
-    public function __invoke(SuggestFieldRequest $request): JsonResponse
+    public function store(SuggestFieldRequest $request): JsonResponse
     {
         return $this->response->success($this->service->suggest($request->toDTO()));
     }

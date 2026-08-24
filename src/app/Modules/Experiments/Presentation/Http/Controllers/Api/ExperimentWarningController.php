@@ -16,7 +16,7 @@ class ExperimentWarningController extends ApiController
         parent::__construct();
     }
 
-    public function __invoke(ExperimentScopeRequest $request): JsonResponse
+    public function index(ExperimentScopeRequest $request): JsonResponse
     {
         return $this->response->success($this->service->warningsFor($request->experimentId(), $request->accountId()));
     }

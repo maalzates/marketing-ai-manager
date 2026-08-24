@@ -16,7 +16,7 @@ class AdminActionLogController extends ApiController
         parent::__construct();
     }
 
-    public function __invoke(IndexGlobalActionLogRequest $request): JsonResponse
+    public function index(IndexGlobalActionLogRequest $request): JsonResponse
     {
         return $this->response->success($this->service->actionLogs($request->toDTO()));
     }

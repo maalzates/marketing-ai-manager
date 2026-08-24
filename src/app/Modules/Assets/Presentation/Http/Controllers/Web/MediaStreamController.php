@@ -18,7 +18,7 @@ class MediaStreamController
 {
     public function __construct(private readonly AssetStreamService $service) {}
 
-    public function __invoke(string $token): StreamedResponse
+    public function show(string $token): StreamedResponse
     {
         return $this->streamOf($this->service->resolve($token));
     }

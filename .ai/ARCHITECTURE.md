@@ -258,6 +258,30 @@ A client names its endpoints as constants, shapes the parameters, and translates
 `ApiCallFailedException` into its own domain exception. No caching, no business
 rules, no persistence.
 
+### Controller methods are named after the resource action
+
+**Never `__invoke()`.** A controller action is always a method named for what it
+does to the resource: `index`, `show`, `store`, `update`, `destroy` — the same
+vocabulary Laravel's resource controllers use, extended only when the domain has
+a verb of its own (`activate`, `pause`, `archive`, `approve`, `verify`).
+
+```php
+// ✅ the route names the action
+Route::get('/usage', [UsageController::class, 'index']);
+Route::post('/proposals/{id}/accept', [AcceptProposalController::class, 'store']);
+
+// ❌ single-action controller
+Route::get('/usage', UsageController::class);
+```
+
+A single-action controller is still fine as a *class* — `AcceptProposalController`
+exists on its own precisely so the container can hand
+`ProposalExecutionService` to it and to nothing else. What is not fine is naming
+its method `__invoke`. Splitting a controller out is a decision about
+dependencies; the method name is where a reader learns what the endpoint does,
+and `__invoke` tells them nothing. `route:list` reads worse too, because every
+row loses the verb.
+
 ### Validation and transformation
 
 Input validation and any reshaping of the payload happen in the FormRequest:

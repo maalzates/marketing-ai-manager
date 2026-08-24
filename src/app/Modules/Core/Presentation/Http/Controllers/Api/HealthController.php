@@ -8,7 +8,7 @@ use Illuminate\Http\JsonResponse;
 
 class HealthController extends ApiController
 {
-    public function __invoke(): JsonResponse
+    public function show(): JsonResponse
     {
         return $this->response->success(['status' => 'ok']);
     }

@@ -41,7 +41,7 @@ use App\Modules\Strategies\Presentation\Http\Controllers\Api\StrategyController;
 use Illuminate\Support\Facades\Route;
 
 // Unversioned on purpose: an infrastructure liveness probe must not move with the API.
-Route::get('/health', HealthController::class);
+Route::get('/health', [HealthController::class, 'show']);
 
 Route::prefix('v1')->group(function (): void {
     // --- Auth ---------------------------------------------------------------
@@ -87,8 +87,8 @@ Route::prefix('v1')->group(function (): void {
 
     // --- Audit --------------------------------------------------------------
     Route::middleware(['auth:sanctum', 'account'])->group(function (): void {
-        Route::get('/usage', UsageController::class);
-        Route::get('/action-logs', ActionLogController::class);
+        Route::get('/usage', [UsageController::class, 'index']);
+        Route::get('/action-logs', [ActionLogController::class, 'index']);
     });
 
     // --- Knowledge ----------------------------------------------------------
@@ -125,9 +125,9 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/strategies/{strategy}/experiments', [ExperimentController::class, 'store'])->whereNumber('strategy');
         Route::get('/experiments/{id}', [ExperimentController::class, 'show'])->whereNumber('id');
         Route::put('/experiments/{id}', [ExperimentController::class, 'update'])->whereNumber('id');
-        Route::get('/experiments/{id}/metrics', ExperimentMetricController::class)->whereNumber('id');
-        Route::get('/experiments/{id}/warnings', ExperimentWarningController::class)->whereNumber('id');
-        Route::post('/experiments/{id}/verdict', ExperimentVerdictController::class)->whereNumber('id');
+        Route::get('/experiments/{id}/metrics', [ExperimentMetricController::class, 'index'])->whereNumber('id');
+        Route::get('/experiments/{id}/warnings', [ExperimentWarningController::class, 'index'])->whereNumber('id');
+        Route::post('/experiments/{id}/verdict', [ExperimentVerdictController::class, 'store'])->whereNumber('id');
     });
 
     // --- Proposals ----------------------------------------------------------
@@ -136,7 +136,7 @@ Route::prefix('v1')->group(function (): void {
     Route::middleware(['auth:sanctum', 'account'])->group(function (): void {
         Route::get('/proposals', [ProposalController::class, 'index']);
         Route::get('/proposals/{id}', [ProposalController::class, 'show'])->whereNumber('id');
-        Route::post('/proposals/{id}/accept', AcceptProposalController::class)->whereNumber('id');
+        Route::post('/proposals/{id}/accept', [AcceptProposalController::class, 'store'])->whereNumber('id');
         Route::post('/proposals/{id}/reject', [ProposalController::class, 'reject'])->whereNumber('id');
     });
 
@@ -165,7 +165,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/content/schedules/recordings', [ContentScheduleController::class, 'recordings']);
         Route::put('/content/schedules/{id}', [ContentScheduleController::class, 'update'])->whereNumber('id');
         Route::delete('/content/schedules/{id}', [ContentScheduleController::class, 'destroy'])->whereNumber('id');
-        Route::get('/content/calendar', ContentCalendarController::class);
+        Route::get('/content/calendar', [ContentCalendarController::class, 'index']);
     });
 
     // --- Assets -------------------------------------------------------------
@@ -188,7 +188,7 @@ Route::prefix('v1')->group(function (): void {
 
     // --- Chat ---------------------------------------------------------------
     Route::middleware(['auth:sanctum', 'account', 'throttle:chat'])->group(function (): void {
-        Route::post('/chat', ChatController::class);
+        Route::post('/chat', [ChatController::class, 'store']);
         Route::get('/chat/conversations', [ChatConversationController::class, 'index']);
         Route::post('/chat/conversations', [ChatConversationController::class, 'store']);
         Route::get('/chat/conversations/{id}', [ChatConversationController::class, 'show'])->whereNumber('id');
@@ -197,14 +197,14 @@ Route::prefix('v1')->group(function (): void {
 
     // --- Ai -----------------------------------------------------------------
     Route::middleware(['auth:sanctum', 'account'])->group(function (): void {
-        Route::post('/ai/suggest', AiSuggestionController::class);
+        Route::post('/ai/suggest', [AiSuggestionController::class, 'store']);
     });
 
     // --- Reporting ----------------------------------------------------------
     Route::middleware(['auth:sanctum', 'account'])->group(function (): void {
         Route::get('/reports', [ReportController::class, 'index']);
         Route::get('/reports/{id}', [ReportController::class, 'show'])->whereNumber('id');
-        Route::post('/strategies/{strategy}/guardian/run', GuardianRunController::class)->whereNumber('strategy');
+        Route::post('/strategies/{strategy}/guardian/run', [GuardianRunController::class, 'store'])->whereNumber('strategy');
     });
 
     // --- Admin --------------------------------------------------------------
@@ -224,8 +224,8 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('/api-keys/{id}', [AdminApiKeyController::class, 'destroy'])->whereNumber('id');
         Route::get('/settings', [AdminSettingController::class, 'index']);
         Route::put('/settings', [AdminSettingController::class, 'update']);
-        Route::get('/usage', AdminUsageController::class);
-        Route::get('/action-logs', AdminActionLogController::class);
+        Route::get('/usage', [AdminUsageController::class, 'index']);
+        Route::get('/action-logs', [AdminActionLogController::class, 'index']);
     });
     Route::middleware(['auth:sanctum', 'role:admin'])->group(function (): void {
         Route::get('/admin/knowledge', [AdminKnowledgeController::class, 'index']);

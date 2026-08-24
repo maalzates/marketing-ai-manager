@@ -16,7 +16,7 @@ class AdminUsageController extends ApiController
         parent::__construct();
     }
 
-    public function __invoke(IndexGlobalUsageRequest $request): JsonResponse
+    public function index(IndexGlobalUsageRequest $request): JsonResponse
     {
         return $this->response->success($this->service->summary($request->toDTO()));
     }

@@ -378,6 +378,22 @@ class CreateCampaignRequest extends FormRequest
 
 ### Controller
 
+**Every action is a method named after the resource action — never `__invoke()`.**
+`index`, `show`, `store`, `update`, `destroy`, plus a domain verb where the domain
+has one (`activate`, `pause`, `archive`, `approve`, `verify`). A controller may
+still be a class with a single action — that is a decision about which
+dependencies it is allowed to receive — but the method name is where the reader
+learns what the endpoint does, and `__invoke` tells them nothing.
+
+```php
+// ✅
+Route::post('/proposals/{id}/accept', [AcceptProposalController::class, 'store']);
+
+// ❌
+Route::post('/proposals/{id}/accept', AcceptProposalController::class);
+```
+
+
 ```php
 <?php
 

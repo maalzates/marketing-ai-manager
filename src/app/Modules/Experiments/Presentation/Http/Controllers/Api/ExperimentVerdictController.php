@@ -16,7 +16,7 @@ class ExperimentVerdictController extends ApiController
         parent::__construct();
     }
 
-    public function __invoke(ConfirmVerdictRequest $request): JsonResponse
+    public function store(ConfirmVerdictRequest $request): JsonResponse
     {
         return $this->response->success($this->service->confirm(
             $request->experimentId(),
