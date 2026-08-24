@@ -528,6 +528,9 @@
     <li><b>Assets</b> — <code>npm ci &amp;&amp; npm run build</code> dentro de un
         <code>node:22-alpine</code> desechable, así el servidor nunca necesita Node.</li>
     <li><b>Migraciones</b> — <code>artisan migrate --force</code>.</li>
+    <li><b>Datos de referencia</b> — <code>artisan db:seed --force</code>. Los dos roles y las
+        entradas de conocimiento no son datos de ejemplo: sin ellos el primer login muere con
+        <code>Role not found.</code> Todos los seeders son <code>firstOrCreate</code>.</li>
     <li><b>Cachés</b> — <code>optimize:clear</code> primero: cachear encima de una caché vieja
         vuelve a hornear los valores antiguos.</li>
     <li><b>Reinicia los workers</b> — <code>queue:work</code> mantiene el código viejo en

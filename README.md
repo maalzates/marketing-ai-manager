@@ -75,7 +75,7 @@ account with one user's key. This is also why the project does not use
 
 ```bash
 make            # list the targets
-make up         # build, install, migrate and start everything (safe to re-run)
+make up         # build, install, migrate, seed and start everything (safe to re-run)
 make start      # resume after `make stop`
 make stop       # stop the containers
 make down       # stop and remove them (the database volume survives)

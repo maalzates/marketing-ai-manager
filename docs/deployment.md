@@ -402,15 +402,20 @@ commit hash. You can also trigger it by hand: Actions → *Deploy to production*
 4. composer install --no-dev --optimize-autoloader
 5. npm ci && npm run build   (inside a throwaway node:22-alpine container)
 6. php artisan migrate --force
-7. optimize:clear, then config:cache / route:cache / view:cache / event:cache
-8. queue:restart + restart the queue and scheduler containers
-9. curl https://APP_DOMAIN/up  ×10 with backoff  → non-zero exit if it never answers
+7. php artisan db:seed --force               ← roles + knowledge entries, idempotent
+8. optimize:clear, then config:cache / route:cache / view:cache / event:cache
+9. queue:restart + restart the queue and scheduler containers
+10. curl https://APP_DOMAIN/up  ×10 with backoff  → non-zero exit if it never answers
 ```
 
 Points worth understanding:
 
 - **`reset --hard`, not `pull`.** A rebase or force-push on `main` would leave a
   `pull` stuck on a merge conflict at 2 a.m. Reset always converges.
+- **Seeding is part of the deploy, not a one-off.** The two roles and the knowledge
+  entries are reference data, not sample data: with an empty `roles` table the very
+  first Google login dies on `Role not found.`, and the onboarding wizard renders
+  without its guides. Every seeder is `firstOrCreate`, so re-running costs nothing.
 - **Caches are cleared before being rebuilt.** `config:cache` on top of a stale
   cache reads the old values and bakes them in again.
 - **Workers must be restarted.** `queue:work` holds the old code in memory for

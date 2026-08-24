@@ -18,7 +18,7 @@ help: ## Show this help
 
 # Safe to re-run: the build is cached, composer is a no-op when the lock is
 # unchanged, and migrations are idempotent. Use `start` for a plain resume.
-up: ## Build, install, migrate and start everything
+up: ## Build, install, migrate, seed and start everything
 	@test -f src/.env || cp src/.env.example src/.env
 	$(DC) build
 	$(DC) up -d db redis
@@ -30,6 +30,7 @@ up: ## Build, install, migrate and start everything
 	$(DC) up -d
 	@grep -q '^APP_KEY=base64:' src/.env || $(APP_T) php artisan key:generate
 	$(APP_T) php artisan migrate --force
+	$(APP_T) php artisan db:seed --force
 	@$(APP_T) sh -c 'test -L public/storage || php artisan storage:link'
 	@echo ""
 	@echo "  app     http://localhost$${HTTP_PORT:+:$$HTTP_PORT}"

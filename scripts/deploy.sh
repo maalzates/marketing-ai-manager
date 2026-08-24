@@ -58,7 +58,13 @@ $COMPOSE exec -T app sh -c 'chown -R www-data:www-data storage bootstrap/cache &
 echo "==> Running migrations"
 $COMPOSE exec -T app php artisan migrate --force
 
-# 7. Caches. Clear first — a stale config cache makes the rebuild read old values.
+# 7. Reference data the application cannot run without: the two roles every login assigns,
+#    plus the knowledge entries the wizard, the glossary and the tooltips render. Every
+#    seeder is firstOrCreate, so this is idempotent and safe on every deploy.
+echo "==> Seeding reference data"
+$COMPOSE exec -T app php artisan db:seed --force
+
+# 8. Caches. Clear first — a stale config cache makes the rebuild read old values.
 echo "==> Rebuilding caches"
 $COMPOSE exec -T app php artisan optimize:clear
 $COMPOSE exec -T app php artisan config:cache
@@ -66,7 +72,7 @@ $COMPOSE exec -T app php artisan route:cache
 $COMPOSE exec -T app php artisan view:cache
 $COMPOSE exec -T app php artisan event:cache
 
-# 8. Everything holding compiled code in memory has to let go of it.
+# 9. Everything holding compiled code in memory has to let go of it.
 #
 #    php.prod.ini sets opcache.validate_timestamps=0, so php-fpm never re-reads a file it
 #    has already compiled — including bootstrap/cache/config.php. Without restarting `app`,
@@ -76,7 +82,7 @@ echo "==> Restarting workers"
 $COMPOSE exec -T app php artisan queue:restart
 $COMPOSE restart app queue scheduler
 
-# 9. Smoke test through nginx. Plain HTTP on purpose: TLS terminates at Cloudflare, so
+# 10. Smoke test through nginx. Plain HTTP on purpose: TLS terminates at Cloudflare, so
 #    this origin has no 443 listener and no certificate to check against.
 echo "==> Health check"
 for _ in $(seq 1 10); do
