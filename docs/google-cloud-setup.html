@@ -38,7 +38,7 @@
 
         <rect x="292" y="34" width="120" height="46" rx="6" fill="#eef4ff" stroke="#7aa7e9"/>
         <text x="352" y="53" text-anchor="middle" fill="#1d3a63">5</text>
-        <text x="352" y="70" text-anchor="middle" fill="#1d3a63">APIs</text>
+        <text x="352" y="70" text-anchor="middle" fill="#1d3a63">Drive API</text>
 
         <rect x="436" y="34" width="120" height="46" rx="6" fill="#eef4ff" stroke="#7aa7e9"/>
         <text x="496" y="53" text-anchor="middle" fill="#1d3a63">6</text>
@@ -226,7 +226,7 @@ are required for switching the app to external production mode.</pre>
         <td><b>Authorized redirect URIs</b></td>
         <td><b>Este sí.</b> Pulsa <b>Add URI</b> dos veces y pega una en cada línea:
 <pre>https://mazzeflow.com/api/v1/auth/google/callback
-http://localhost:8080/api/v1/auth/google/callback</pre></td>
+http://localhost/api/v1/auth/google/callback</pre></td>
       </tr>
     </tbody>
   </table>
@@ -243,13 +243,14 @@ http://localhost:8080/api/v1/auth/google/callback</pre></td>
 <!-- ============================================================== 5 -->
 <section id="p5">
 <div class="wrap">
-  <h2><span class="n">5</span> Habilitar las dos APIs</h2>
-  <p>Antes de los scopes: los de Drive y YouTube no aparecen en la lista del paso 6 si su
-     API no está habilitada.</p>
+  <h2><span class="n">5</span> Habilitar Google Drive API</h2>
+  <p>Antes de los scopes: <code>drive.file</code> no aparece en la lista del paso 6 si la
+     API de Drive no está habilitada.</p>
   <ol class="steps">
     <li>Menú <b>☰</b> → <b>APIs &amp; Services</b> → <b>Library</b>.</li>
     <li>Busca <code>Google Drive API</code> → ábrela → <b>Enable</b>.</li>
-    <li>Vuelve a <b>Library</b>. Busca <code>YouTube Data API v3</code> → <b>Enable</b>.</li>
+    <li><b>YouTube Data API v3</b>: sáltala. Su scope es sensible y la feature está apagada
+        — ver el aviso del paso 6.</li>
   </ol>
 </div>
 </section>
@@ -257,12 +258,13 @@ http://localhost:8080/api/v1/auth/google/callback</pre></td>
 <!-- ============================================================== 6 -->
 <section id="p6">
 <div class="wrap">
-  <h2><span class="n">6</span> Declarar los cinco scopes</h2>
+  <h2><span class="n">6</span> Declarar los cuatro scopes</h2>
   <ol class="steps">
     <li><b>Google Auth Platform</b> → <b>Data access</b>.</li>
     <li>Botón <b>Add or remove scopes</b>.</li>
-    <li>Marca los cinco de la tabla. Los tres primeros salen en la lista; los dos últimos se
-        pegan en el campo <b>Manually add scopes</b> y se pulsa <b>Add to table</b>.</li>
+    <li>Marca los cuatro de la tabla. Los tres primeros salen en la lista;
+        <code>drive.file</code> se pega en <b>Manually add scopes</b> y se pulsa
+        <b>Add to table</b>.</li>
     <li><b>Update</b> y luego <b>Save</b>.</li>
   </ol>
 
@@ -276,9 +278,23 @@ http://localhost:8080/api/v1/auth/google/callback</pre></td>
       <tr><td><code>email</code></td><td>Entrar</td></tr>
       <tr><td><code>profile</code></td><td>Nombre y avatar</td></tr>
       <tr><td><code>https://www.googleapis.com/auth/drive.file</code></td><td>Biblioteca de piezas</td></tr>
-      <tr><td><code>https://www.googleapis.com/auth/youtube.readonly</code></td><td>Métricas de YouTube</td></tr>
     </tbody>
   </table>
+
+  <div class="card amber">
+    <h4>No añadas <code>youtube.readonly</code> todavía</h4>
+    <p>Es un <b>scope sensible</b>. Al añadirlo, <b>Data access</b> lo mete en «Your
+       sensitive scopes — Approval required» y pide una justificación: la app entra en
+       revisión manual de Google, que tarda semanas y exige política de privacidad real y
+       vídeo de demostración.</p>
+    <p>Y lo pedirías para nada: <code>features.youtube</code> está en <code>false</code> en
+       <code>config/settings.php</code>, y la aplicación solo envía ese scope cuando alguien
+       conecta YouTube desde Integraciones. Con el flag apagado, nunca se pide.</p>
+    <p>Si ya lo añadiste: papelera en su fila, borra la justificación, <b>Save</b>. Los otros
+       cuatro no son sensibles y publican sin aprobación.</p>
+    <p>Cuando la parte de YouTube esté construida se añade el scope y se pasa la verificación
+       entonces, con la app en marcha y algo real que enseñar.</p>
+  </div>
 </div>
 </section>
 
@@ -345,7 +361,7 @@ GOOGLE_CLIENT_SECRET=<em>el Client secret del paso 4</em></pre>
 <div class="wrap">
   <h2><span class="n">9</span> Probar</h2>
   <ol class="steps">
-    <li>Abre <code>https://mazzeflow.com</code> o <code>http://localhost:8080</code>.</li>
+    <li>Abre <code>https://mazzeflow.com</code> o <code>http://localhost</code>.</li>
     <li>Entra con Google.</li>
     <li>Debe salir la pantalla de consentimiento con el <b>App name</b> del paso 2, y volver
         a la aplicación ya autenticado.</li>

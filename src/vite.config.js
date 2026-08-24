@@ -20,8 +20,19 @@ export default defineConfig({
     server: {
         host: '0.0.0.0',
         port: 5173,
-        // The browser talks to Vite on the host, not inside the container network.
-        hmr: { host: 'localhost' },
+        // nginx proxies this dev server, so the browser only ever talks to one origin. The
+        // client must therefore be told to connect back through nginx on :80 and on the
+        // path nginx proxies — not to :5173, which is no longer published.
+        hmr: {
+            host: 'localhost',
+            clientPort: 80,
+            protocol: 'ws',
+            path: '/vite-hmr',
+        },
+        // Vite refuses requests whose Host header it does not recognise, and the proxied
+        // ones arrive as `localhost`.
+        allowedHosts: ['localhost'],
+        origin: 'http://localhost',
         watch: {
             usePolling: true,
             ignored: ['**/storage/framework/views/**'],

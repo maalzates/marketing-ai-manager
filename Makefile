@@ -32,9 +32,11 @@ up: ## Build, install, migrate and start everything
 	$(APP_T) php artisan migrate --force
 	@$(APP_T) sh -c 'test -L public/storage || php artisan storage:link'
 	@echo ""
-	@echo "  app     http://localhost:$${HTTP_PORT:-8080}"
-	@echo "  vite    http://localhost:$${VITE_PORT:-5173}"
+	@echo "  app     http://localhost$${HTTP_PORT:+:$$HTTP_PORT}"
 	@echo "  mailpit http://localhost:$${MAILPIT_PORT:-8025}"
+	@echo ""
+	@echo "  Vite runs in the node container and is proxied by nginx; there is no"
+	@echo "  separate port to open, and hot reload needs nothing running on the host."
 
 start: ## Start the containers again after `stop`
 	$(DC) start

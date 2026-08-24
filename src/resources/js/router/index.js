@@ -9,6 +9,12 @@ import { useOnboardingStore } from '@/stores/onboarding';
 const router = createRouter({
     history: createWebHistory(),
     routes: [
+        // Four records share `path: '/'` so their children can use relative paths. Vue Router
+        // matches a parent that has a component even when no child matches, so a bare `/`
+        // used to hit the first of them — AuthLayout — and render the layout wrapped around
+        // an empty RouterView. This exact-match redirect resolves the ambiguity before that
+        // can happen; the guard then bounces an unauthenticated visitor to the login screen.
+        { path: '/', redirect: { name: 'dashboard' } },
         {
             path: '/',
             component: AuthLayout,
