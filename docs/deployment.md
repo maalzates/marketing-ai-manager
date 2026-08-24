@@ -530,6 +530,8 @@ provider snapshots) before you have real data.
 | Certificate expired | renewal hook never reloaded nginx | `certbot renew --dry-run`; `docker exec marketing-ai-nginx nginx -s reload` |
 | Deploy hangs on `npm ci` | out of memory | `free -h` — the swap file from step 6 is not optional |
 | Queue jobs run old code | `queue:restart` skipped | `$C restart queue` |
+| Google: "Missing required parameter: client_id" | `GOOGLE_CLIENT_ID` empty in `src/.env` on the server | `curl -s https://YOUR_DOMAIN/api/v1/auth/google/redirect` — an empty `client_id=` in the URL says it; fill it, then `$C exec app php artisan config:cache` |
+| Google: `redirect_uri_mismatch` | the console does not have the URI the app derives from `APP_URL` | Compare the `redirect_uri` in that same URL against the console's authorised list |
 
 Full reset (**destroys the database** — take a dump first):
 

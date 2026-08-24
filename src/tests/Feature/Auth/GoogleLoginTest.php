@@ -41,6 +41,19 @@ class GoogleLoginTest extends TestCase
         $this->transport = FakeTransport::silent()->install($this->app);
     }
 
+    /**
+     * An empty client id builds a URL Google rejects with `invalid_request`, which reads as
+     * a bug in the app rather than as the unset variable it is.
+     */
+    public function test_sign_in_refuses_to_build_a_url_when_the_client_id_is_not_configured(): void
+    {
+        config(['services.google.client_id' => '']);
+
+        $this->getJson('/api/v1/auth/google/redirect')
+            ->assertStatus(500)
+            ->assertJsonPath('errors.message', 'La aplicación no tiene configurada la credencial de OAuth. Falta la variable GOOGLE_CLIENT_ID.');
+    }
+
     public function test_a_first_login_creates_the_user_the_account_and_the_role(): void
     {
         $this->login()->assertRedirectContains('/auth/callback?token=');
