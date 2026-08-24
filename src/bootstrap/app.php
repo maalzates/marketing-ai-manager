@@ -19,6 +19,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // TLS terminates at Cloudflare and the hop to this origin is plain HTTP, so the
+        // visitor's real IP and scheme only exist in headers. Without trusting them Laravel
+        // builds http:// URLs behind an https:// site, which the browser blocks as mixed
+        // content, and every rate limit and audit-log entry records Cloudflare's IP instead
+        // of the user's. Trusting every proxy is safe *because* the firewall only lets
+        // Cloudflare reach port 80 — if that restriction is lifted, this becomes spoofable.
+        $middleware->trustProxies(at: '*', headers: Request::HEADER_X_FORWARDED_FOR
+            | Request::HEADER_X_FORWARDED_HOST
+            | Request::HEADER_X_FORWARDED_PORT
+            | Request::HEADER_X_FORWARDED_PROTO);
+
         $middleware->alias([
             'account' => EnsureAccountContext::class,
             'role' => EnsureRole::class,

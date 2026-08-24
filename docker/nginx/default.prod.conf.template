@@ -1,30 +1,30 @@
-# HTTP: ACME challenges pass through, everything else is redirected to HTTPS.
-server {
-    listen 80;
-    server_name ${APP_DOMAIN};
+# TLS terminates at Cloudflare (SSL/TLS mode: Flexible), so this origin speaks plain HTTP
+# and holds no certificate. Consequences worth knowing before changing anything here:
+#
+#   * There is no :443 listener and no certbot. Issuing a certificate here would be dead
+#     weight — Cloudflare never presents it.
+#   * The hop from Cloudflare to this box is unencrypted. That is what Flexible means, and
+#     it is only acceptable because UFW allows :80 from Cloudflare's ranges alone. If that
+#     restriction is ever lifted, anyone hitting the origin IP reads traffic in the clear.
+#   * The visitor's real IP and scheme arrive in headers, not on the connection. Laravel is
+#     configured to trust them (see bootstrap/app.php); nginx restores the client IP below
+#     so access logs and rate limiting are not all Cloudflare.
 
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
+# Cloudflare edge ranges, refreshed on the server by cloudflare-ranges-refresh.
+include /etc/nginx/cloudflare/real-ip.conf;
 
-    location / {
-        return 301 https://$host$request_uri;
-    }
+# Cloudflare reports the visitor's scheme, which is https even though this hop is not.
+map $http_x_forwarded_proto $forwarded_https {
+    default off;
+    https   on;
 }
 
 server {
-    listen 443 ssl;
-    http2 on;
+    listen 80 default_server;
     server_name ${APP_DOMAIN};
 
-    ssl_certificate     /etc/letsencrypt/live/${APP_DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${APP_DOMAIN}/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers off;
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 1d;
-
-    add_header Strict-Transport-Security "max-age=31536000" always;
+    # Cloudflare adds HSTS at the edge; adding it here too would be duplicated on every
+    # response. The rest are ours to set because Cloudflare does not.
     add_header X-Content-Type-Options nosniff always;
     add_header X-Frame-Options SAMEORIGIN always;
     add_header Referrer-Policy strict-origin-when-cross-origin always;
@@ -49,7 +49,9 @@ server {
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         fastcgi_param PATH_INFO $fastcgi_path_info;
-        fastcgi_param HTTPS on;
+        # The visitor reached Cloudflare over HTTPS even though this hop is HTTP. Without
+        # this, Laravel builds http:// URLs and the browser blocks them as mixed content.
+        fastcgi_param HTTPS $forwarded_https;
         fastcgi_read_timeout 120;
     }
 

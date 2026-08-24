@@ -63,16 +63,16 @@ services:
   nginx:
     container_name: marketing-ai-nginx
     image: nginx:alpine
+    # No :443 and no certificate: TLS terminates at Cloudflare (Flexible mode) and this
+    # origin speaks plain HTTP. UFW is what keeps :80 reachable only from Cloudflare.
     ports:
       - "80:80"
-      - "443:443"
     environment:
       APP_DOMAIN: ${APP_DOMAIN}
     volumes:
       - ./src:/var/www/html:ro
       - ./docker/nginx/default.prod.conf.template:/etc/nginx/templates/default.conf.template:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - certbot-webroot:/var/www/certbot
+      - /etc/nginx/cloudflare:/etc/nginx/cloudflare:ro
       - nginx-logs:/var/log/nginx
     depends_on: [app]
     restart: unless-stopped
@@ -157,6 +157,5 @@ volumes:
   mysql-data:
   redis-data:
   nginx-logs:
-  certbot-webroot:
   loki-data:
   grafana-data:
