@@ -129,8 +129,9 @@ TailwindCSS 4 · Vite · nginx · Docker Compose
 
 ## Deployment
 
-Push to `main`. CI runs Pint, PHPUnit and a production frontend build; if it
-passes, the deploy workflow SSHes into the VPS and runs `scripts/deploy.sh`.
+Open a pull request: CI runs Pint, PHPUnit and a production frontend build. Merge
+it: the deploy workflow re-runs that same suite on the merge commit and, only if it
+passes, SSHes into the VPS and runs `scripts/deploy.sh`.
 
 **TLS terminates at Cloudflare, in Flexible mode.** The origin serves plain HTTP on
 port 80, holds no certificate and runs no certbot. Two consequences that are easy to

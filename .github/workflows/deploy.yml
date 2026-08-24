@@ -1,10 +1,8 @@
 name: Deploy to production
 
 on:
-  workflow_run:
-    workflows: [CI]
+  push:
     branches: [main]
-    types: [completed]
   workflow_dispatch:
 
 concurrency:
@@ -12,11 +10,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The same suite the pull request ran, re-run on the merge commit. Nothing reaches the
+  # server that has not been through it.
+  test:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
   deploy:
     name: Deploy to VPS
     runs-on: ubuntu-latest
-    # Never deploy a red build. workflow_dispatch has no upstream run to check.
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    needs: test
     environment: production
 
     steps:

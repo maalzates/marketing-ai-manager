@@ -2,8 +2,8 @@
 #
 # Marketing AI Manager — production deploy.
 #
-# Idempotent: safe to re-run. Invoked by .github/workflows/deploy.yml over SSH,
-# and by `make deploy` when deploying by hand.
+# Idempotent: safe to re-run. Invoked by .github/workflows/deploy.yml over SSH, and
+# run by hand from this directory on the server when a deploy has to be forced.
 #
 # Assumes setup-production.sh has already run on this box.
 

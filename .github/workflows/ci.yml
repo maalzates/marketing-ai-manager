@@ -1,9 +1,10 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
+  # Called by deploy.yml on the merge commit: the tree that merged is not always the tree
+  # the PR tested, and it is the merged one that ships.
+  workflow_call:
 
 jobs:
   backend:

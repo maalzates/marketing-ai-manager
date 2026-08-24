@@ -502,17 +502,19 @@
   <h2><span class="n">07</span> Del push al servidor</h2>
 
   <div class="pipeline">
-    <div class="step"><h5>git push</h5><p>a <code>main</code></p></div>
-    <div class="step"><h5>Actions · CI</h5><p>Pint · PHPUnit contra MySQL · build de frontend</p></div>
-    <div class="step"><h5>Actions · Deploy</h5><p><code>workflow_run</code>, solo si CI pasó. Serializado</p></div>
-    <div class="step"><h5>ssh al VPS</h5><p><code>scripts/deploy.sh</code></p></div>
+    <div class="step"><h5>Pull request</h5><p>Actions · CI: Pint · PHPUnit contra MySQL · build de frontend</p></div>
+    <div class="step"><h5>Merge a <code>main</code></h5><p>dispara <em>Deploy to production</em></p></div>
+    <div class="step"><h5>Job <code>test</code></h5><p>la misma CI, sobre el commit de merge</p></div>
+    <div class="step"><h5>ssh al VPS</h5><p><code>scripts/deploy.sh</code>, solo si <code>test</code> pasó</p></div>
   </div>
 
   <div class="card red">
     <h4>Un build en rojo nunca llega al servidor</h4>
-    <p>El despliegue se encadena a CI con <code>workflow_run</code> y no al push.
-       <code>concurrency: production-deploy</code> hace que dos pushes seguidos se encolen
-       en lugar de competir.</p>
+    <p>Los tests corren en el pull request, y el merge vuelve a correrlos sobre el commit
+       resultante — el árbol que se mergea no siempre es el que probó la PR, y es el mergeado
+       el que se despliega. <code>ssh</code> depende de ese job con <code>needs</code>, así que
+       un rojo corta el deploy. <code>concurrency: production-deploy</code> hace que dos merges
+       seguidos se encolen en lugar de competir.</p>
   </div>
 
   <h3>Qué hace <code>deploy.sh</code></h3>

@@ -319,15 +319,22 @@ certbot certonly --webroot -w /var/lib/docker/volumes/marketing-ai_certbot-webro
 
 ## 8. Automatic deployment with GitHub Actions
 
-Two workflows, chained:
+Two workflows. Tests belong to the pull request; deploying belongs to the merge:
 
-- `.github/workflows/ci.yml` — runs on every push and PR: Pint, PHPUnit, and a
-  production frontend build.
-- `.github/workflows/deploy.yml` — runs **only after CI succeeds on `main`**,
-  SSHes into the VPS and runs `scripts/deploy.sh`.
+- `.github/workflows/ci.yml` — runs on every **pull request**: Pint, PHPUnit and a
+  production frontend build. It is also `workflow_call`-able, which is how the
+  deploy reuses it.
+- `.github/workflows/deploy.yml` — runs on every **push to `main`**, so in practice
+  on the merge. Its first job calls `ci.yml` on the merge commit; only if that
+  passes does the second job SSH into the VPS and run `scripts/deploy.sh`.
 
-A red build never reaches the server. `concurrency: production-deploy` means two
-pushes in quick succession queue instead of racing.
+The suite runs twice on purpose. The tree that merges is not always the tree the
+pull request tested — a semantic conflict between two green branches is green
+twice and broken once merged — and it is the merged tree that ships.
+
+A red build never reaches the server: the SSH job declares `needs: test`.
+`concurrency: production-deploy` means two merges in quick succession queue
+instead of racing.
 
 ### 8.1 Create the Actions SSH key
 
@@ -377,6 +384,9 @@ git commit --allow-empty -m "chore: trigger deploy"
 git push origin main
 ```
 
+Pushing straight to `main` is what a merge does as far as Actions is concerned, so
+this triggers the deploy the same way a merged pull request would.
+
 Watch it under the Actions tab. On success the deploy job prints the deployed
 commit hash. You can also trigger it by hand: Actions → *Deploy to production* →
 **Run workflow**.
@@ -416,7 +426,7 @@ Points worth understanding:
 ```bash
 ssh root@YOUR_SERVER_IP
 cd /var/www/marketing-ai-manager
-./scripts/deploy.sh          # or: make deploy
+./scripts/deploy.sh
 ```
 
 ---
