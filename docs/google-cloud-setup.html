@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configurar Google Cloud · Marketing AI Manager</title>
+<link rel="stylesheet" href="_canvas.css">
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="kicker">Guía de operador · Google Cloud Console</span>
+    <h1>Configurar Google Cloud</h1>
+    <p>Nueve pasos en orden. Haz uno, pasa al siguiente. No saltes: la consola bloquea los
+       pasos posteriores hasta que los anteriores están hechos.</p>
+    <div class="meta">
+      <span><b>Consola</b> console.cloud.google.com</span>
+      <span><b>Tiempo</b> ~15 min</span>
+      <span><b>Etiquetas</b> en inglés, como las muestra la consola</span>
+    </div>
+  </div>
+</header>
+
+<section>
+<div class="wrap">
+
+  <figure>
+    <svg viewBox="0 0 900 118" role="img" aria-label="Orden de los nueve pasos">
+      <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="11">
+        <rect x="4"   y="34" width="120" height="46" rx="6" fill="#eef4ff" stroke="#7aa7e9"/>
+        <text x="64"  y="53" text-anchor="middle" fill="#1d3a63">1–3</text>
+        <text x="64"  y="70" text-anchor="middle" fill="#1d3a63">Branding</text>
+
+        <rect x="148" y="34" width="120" height="46" rx="6" fill="#eef4ff" stroke="#7aa7e9"/>
+        <text x="208" y="53" text-anchor="middle" fill="#1d3a63">4</text>
+        <text x="208" y="70" text-anchor="middle" fill="#1d3a63">Cliente OAuth</text>
+
+        <rect x="292" y="34" width="120" height="46" rx="6" fill="#eef4ff" stroke="#7aa7e9"/>
+        <text x="352" y="53" text-anchor="middle" fill="#1d3a63">5</text>
+        <text x="352" y="70" text-anchor="middle" fill="#1d3a63">APIs</text>
+
+        <rect x="436" y="34" width="120" height="46" rx="6" fill="#eef4ff" stroke="#7aa7e9"/>
+        <text x="496" y="53" text-anchor="middle" fill="#1d3a63">6</text>
+        <text x="496" y="70" text-anchor="middle" fill="#1d3a63">Scopes</text>
+
+        <rect x="580" y="34" width="120" height="46" rx="6" fill="#fff4e0" stroke="#e0a33e"/>
+        <text x="640" y="53" text-anchor="middle" fill="#6b4a12">7</text>
+        <text x="640" y="70" text-anchor="middle" fill="#6b4a12">Publish app</text>
+
+        <rect x="724" y="34" width="172" height="46" rx="6" fill="#e9f6ee" stroke="#5aa878"/>
+        <text x="810" y="53" text-anchor="middle" fill="#1e4b32">8–9</text>
+        <text x="810" y="70" text-anchor="middle" fill="#1e4b32">.env y probar</text>
+
+        <g stroke="#9aa4b2" fill="none">
+          <path d="M124 57 h20"/><path d="M268 57 h20"/><path d="M412 57 h20"/>
+          <path d="M556 57 h20"/><path d="M700 57 h20"/>
+        </g>
+        <g fill="#9aa4b2">
+          <polygon points="146,57 139,54 139,60"/><polygon points="290,57 283,54 283,60"/>
+          <polygon points="434,57 427,54 427,60"/><polygon points="578,57 571,54 571,60"/>
+          <polygon points="722,57 715,54 715,60"/>
+        </g>
+        <text x="450" y="18" text-anchor="middle" fill="#5b6472" font-size="11">
+          Los pasos 1–3 son obligatorios antes de poder publicar en el paso 7
+        </text>
+      </g>
+    </svg>
+  </figure>
+
+  <div class="card amber">
+    <h4>Dónde está todo</h4>
+    <p>Menú <b>☰</b> → <b>Google Auth Platform</b>. Ahí viven <b>Overview</b>,
+       <b>Branding</b>, <b>Audience</b>, <b>Clients</b> y <b>Data access</b>.
+       Solo el paso 5 está en otro sitio: <b>APIs &amp; Services</b> → <b>Library</b>.</p>
+    <p>Si un tutorial te manda a «APIs &amp; Services → OAuth consent screen», es de la
+       consola anterior. Ya no existe.</p>
+  </div>
+
+</div>
+</section>
+
+<!-- ============================================================== 1 -->
+<section id="p1">
+<div class="wrap">
+  <h2><span class="n">1</span> Crear o elegir el proyecto</h2>
+  <ol class="steps">
+    <li>Entra en <code>console.cloud.google.com</code>.</li>
+    <li>Selector de proyecto, arriba a la izquierda, junto al logo.</li>
+    <li>Si no hay proyecto: <b>New project</b> → nombre libre → <b>Create</b>.</li>
+  </ol>
+  <p>Un solo proyecto para local y producción. Todo lo demás cuelga de él.</p>
+</div>
+</section>
+
+<!-- ============================================================== 2 -->
+<section id="p2">
+<div class="wrap">
+  <h2><span class="n">2</span> Configurar Google Auth Platform</h2>
+  <p>Esto es lo que la consola exige antes de dejarte crear el cliente o publicar. Si ya lo
+     hiciste, salta al paso 3.</p>
+  <ol class="steps">
+    <li>Menú <b>☰</b> → <b>Google Auth Platform</b>.</li>
+    <li>Botón <b>Get started</b>.</li>
+    <li>Rellena las cuatro pantallas con la tabla de abajo.</li>
+    <li>Botón <b>Create</b>.</li>
+  </ol>
+
+  <table>
+    <thead><tr>
+      <th style="width:24%">Pantalla</th>
+      <th style="width:26%">Campo</th>
+      <th>Qué poner</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td rowspan="2">App Information</td>
+        <td><b>App name</b></td>
+        <td><code>Marketing AI Manager</code> — esto <em>sí</em> lo ve el usuario en la
+            pantalla de consentimiento. No puede contener «Google».</td>
+      </tr>
+      <tr>
+        <td><b>User support email</b></td>
+        <td>Tu correo, del desplegable.</td>
+      </tr>
+      <tr>
+        <td>Audience</td>
+        <td><b>Audience</b></td>
+        <td><b>External</b>. «Internal» solo sirve dentro de una organización de Workspace.</td>
+      </tr>
+      <tr>
+        <td>Contact Information</td>
+        <td><b>Email addresses</b></td>
+        <td>Tu correo. Aquí llegan los avisos de Google sobre el proyecto.</td>
+      </tr>
+      <tr>
+        <td>Finish</td>
+        <td>Casilla de las políticas</td>
+        <td>Marcar y <b>Continue</b>.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</section>
+
+<!-- ============================================================== 3 -->
+<section id="p3">
+<div class="wrap">
+  <h2><span class="n">3</span> Revisar Branding</h2>
+  <ol class="steps">
+    <li><b>Google Auth Platform</b> → <b>Branding</b>.</li>
+    <li>Rellena los cinco campos de la tabla. <b>Terms of service</b> se queda vacío.</li>
+    <li><b>Save</b>.</li>
+  </ol>
+
+  <table>
+    <thead><tr>
+      <th style="width:38%">Campo</th>
+      <th>Valor</th>
+    </tr></thead>
+    <tbody>
+      <tr><td><b>App name</b></td>
+          <td><code>MazzeFlow AI Marketing</code> — sin flechas ni símbolos raros, y sin la
+              palabra «Google».</td></tr>
+      <tr><td><b>User support email</b></td>
+          <td>Tu correo, del desplegable.</td></tr>
+      <tr><td><b>Application home page</b></td>
+          <td><code>https://mazzeflow.com</code></td></tr>
+      <tr><td><b>Application privacy policy link</b></td>
+          <td><code>https://mazzeflow.com/privacy</code></td></tr>
+      <tr><td><b>Application terms of service link</b></td>
+          <td>Vacío. No es obligatorio.</td></tr>
+      <tr><td><b>Authorized domain 1</b></td>
+          <td><code>mazzeflow.com</code> — sin <code>https://</code> y sin barra final.</td></tr>
+      <tr><td><b>App logo</b></td>
+          <td>Vacío. Subirlo obliga a pasar verificación.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="card amber">
+    <h4>Estos cuatro no son opcionales</h4>
+    <p>Google lo dice en el tooltip del botón <b>Publish app</b>:</p>
+    <pre>Valid app name, support email, homepage url, and privacy policy url
+are required for switching the app to external production mode.</pre>
+    <p>Si falta alguno, <b>Audience</b> muestra «Your app's OAuth configuration is
+       incomplete» y <b>Publish app</b> queda en gris.</p>
+    <p><code>/privacy</code> responde 200 porque la SPA sirve cualquier ruta, así que la URL
+       vale para publicar — Google solo revisa el contenido en la verificación, que con
+       <code>drive.file</code> no hace falta. Pero <b>ahí no hay ninguna política todavía</b>.
+       Es deuda pendiente, no algo resuelto.</p>
+  </div>
+
+</div>
+</section>
+
+<!-- ============================================================== 4 -->
+<section id="p4">
+<div class="wrap">
+  <h2><span class="n">4</span> Crear el cliente OAuth</h2>
+  <ol class="steps">
+    <li><b>Google Auth Platform</b> → <b>Clients</b>.</li>
+    <li>Botón <b>Create client</b>.</li>
+    <li>Rellena con la tabla de abajo.</li>
+    <li>Botón <b>Create</b>.</li>
+  </ol>
+
+  <table>
+    <thead><tr>
+      <th style="width:30%">Campo</th>
+      <th>Qué poner</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td><b>Application type</b></td>
+        <td><b>Web application</b></td>
+      </tr>
+      <tr>
+        <td><b>Name</b></td>
+        <td><code>marketing-ai-manager</code> — solo lo ves tú en la consola.</td>
+      </tr>
+      <tr>
+        <td><b>Authorized JavaScript origins</b></td>
+        <td><b>Dejar vacío.</b> No es este.</td>
+      </tr>
+      <tr>
+        <td><b>Authorized redirect URIs</b></td>
+        <td><b>Este sí.</b> Pulsa <b>Add URI</b> dos veces y pega una en cada línea:
+<pre>https://mazzeflow.com/api/v1/auth/google/callback
+http://localhost:8080/api/v1/auth/google/callback</pre></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="card amber">
+    <h4>Copia el secreto ahora</h4>
+    <p>Al pulsar <b>Create</b> aparecen <b>Client ID</b> y <b>Client secret</b>. El secreto
+       se muestra <b>una sola vez</b>. Pulsa <b>Download JSON</b> o cópialo a un sitio
+       seguro. Si lo pierdes, hay que crear otro.</p>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================== 5 -->
+<section id="p5">
+<div class="wrap">
+  <h2><span class="n">5</span> Habilitar las dos APIs</h2>
+  <p>Antes de los scopes: los de Drive y YouTube no aparecen en la lista del paso 6 si su
+     API no está habilitada.</p>
+  <ol class="steps">
+    <li>Menú <b>☰</b> → <b>APIs &amp; Services</b> → <b>Library</b>.</li>
+    <li>Busca <code>Google Drive API</code> → ábrela → <b>Enable</b>.</li>
+    <li>Vuelve a <b>Library</b>. Busca <code>YouTube Data API v3</code> → <b>Enable</b>.</li>
+  </ol>
+</div>
+</section>
+
+<!-- ============================================================== 6 -->
+<section id="p6">
+<div class="wrap">
+  <h2><span class="n">6</span> Declarar los cinco scopes</h2>
+  <ol class="steps">
+    <li><b>Google Auth Platform</b> → <b>Data access</b>.</li>
+    <li>Botón <b>Add or remove scopes</b>.</li>
+    <li>Marca los cinco de la tabla. Los tres primeros salen en la lista; los dos últimos se
+        pegan en el campo <b>Manually add scopes</b> y se pulsa <b>Add to table</b>.</li>
+    <li><b>Update</b> y luego <b>Save</b>.</li>
+  </ol>
+
+  <table>
+    <thead><tr>
+      <th style="width:52%">Scope</th>
+      <th>Para qué</th>
+    </tr></thead>
+    <tbody>
+      <tr><td><code>openid</code></td><td>Entrar</td></tr>
+      <tr><td><code>email</code></td><td>Entrar</td></tr>
+      <tr><td><code>profile</code></td><td>Nombre y avatar</td></tr>
+      <tr><td><code>https://www.googleapis.com/auth/drive.file</code></td><td>Biblioteca de piezas</td></tr>
+      <tr><td><code>https://www.googleapis.com/auth/youtube.readonly</code></td><td>Métricas de YouTube</td></tr>
+    </tbody>
+  </table>
+</div>
+</section>
+
+<!-- ============================================================== 7 -->
+<section id="p7">
+<div class="wrap">
+  <h2><span class="n">7</span> Publicar la app</h2>
+  <ol class="steps">
+    <li><b>Google Auth Platform</b> → <b>Audience</b>.</li>
+    <li>En <b>Publishing status</b> pulsa <b>Publish app</b>.</li>
+    <li>Confirma. Debe quedar <b>In production</b>.</li>
+  </ol>
+
+  <div class="card amber">
+    <h4>Este es el paso que no se puede saltar</h4>
+    <p>En <code>Testing</code>, Google dice textualmente:</p>
+    <pre>Authorizations by a test user will expire seven days from the time of
+consent. If your OAuth client requests an offline access type and
+receives a refresh token, that token will also expire.</pre>
+    <p>Traducido: funciona hoy y <b>a los siete días</b> todos los usuarios pierden Drive y
+       YouTube a la vez. El refresh empieza a devolver <code>invalid_grant</code> y hay que
+       reconectar cuenta por cuenta.</p>
+    <p>No hace falta verificación para publicar con estos scopes: <code>drive.file</code> no
+       es sensible. La verificación aparece con scopes más amplios.</p>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================== 8 -->
+<section id="p8">
+<div class="wrap">
+  <h2><span class="n">8</span> Pegar las credenciales</h2>
+  <p>Las dos líneas, en el <code>src/.env</code> del entorno que toque:</p>
+<pre>GOOGLE_CLIENT_ID=<em>el Client ID del paso 4</em>
+GOOGLE_CLIENT_SECRET=<em>el Client secret del paso 4</em></pre>
+
+  <table>
+    <thead><tr>
+      <th style="width:22%">Entorno</th>
+      <th style="width:40%">Fichero</th>
+      <th>Después</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td>Local</td>
+        <td><code>src/.env</code></td>
+        <td>Nada más.</td>
+      </tr>
+      <tr>
+        <td>Producción</td>
+        <td><code>/var/www/marketing-ai-manager/src/.env</code></td>
+        <td>Rehacer la caché de configuración, o el cambio <b>no surte efecto</b>:
+<pre>./scripts/deploy.sh</pre></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p><code>GOOGLE_REDIRECT_URI</code> ya viene puesto en los dos sitios. No lo toques.</p>
+</div>
+</section>
+
+<!-- ============================================================== 9 -->
+<section id="p9">
+<div class="wrap">
+  <h2><span class="n">9</span> Probar</h2>
+  <ol class="steps">
+    <li>Abre <code>https://mazzeflow.com</code> o <code>http://localhost:8080</code>.</li>
+    <li>Entra con Google.</li>
+    <li>Debe salir la pantalla de consentimiento con el <b>App name</b> del paso 2, y volver
+        a la aplicación ya autenticado.</li>
+  </ol>
+
+  <table>
+    <thead><tr>
+      <th style="width:34%">Error</th>
+      <th>Causa</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td><code>redirect_uri_mismatch</code></td>
+        <td>El URI del paso 4 no coincide carácter por carácter. Revisa <code>http</code> vs
+            <code>https</code>, el puerto y la barra final.</td>
+      </tr>
+      <tr>
+        <td><code>invalid_grant</code> a los 7 días</td>
+        <td>Sigue en <code>Testing</code>. Paso 7.</td>
+      </tr>
+      <tr>
+        <td><code>access_blocked</code></td>
+        <td>Falta el paso 2 o el 3: sin <b>App name</b> y <b>User support email</b> la
+            pantalla de consentimiento no se puede mostrar.</td>
+      </tr>
+      <tr>
+        <td>Falla la llamada a Drive o YouTube</td>
+        <td>Paso 5. El token es válido pero la API no está habilitada.</td>
+      </tr>
+      <tr>
+        <td>La segunda conexión no da refresh token</td>
+        <td>Normal: Google solo lo entrega en el primer consentimiento. La aplicación manda
+            siempre <code>access_type=offline</code> y <code>prompt=consent</code> para
+            forzarlo.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Marketing AI Manager · <a href="project-map.html">Mapa del proyecto</a> ·
+       <a href="system-flows.html">Flujos del sistema</a></p>
+  </div>
+</footer>
+
+</body>
+</html>

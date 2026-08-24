@@ -265,6 +265,10 @@ docker compose --env-file .env.docker -f docker-compose.prod.yml exec -T app php
 Neither file is in git. Back both up somewhere you will still have access to
 when the server is gone.
 
+`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` come from Google Cloud Console:
+[`google-cloud-setup.html`](./google-cloud-setup.html) is the step-by-step canvas
+for that, including the exact redirect URIs this deployment must register.
+
 ---
 
 ## 7. TLS certificates

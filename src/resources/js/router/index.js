@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import AppLayout from '@/layouts/AppLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
+import LegalLayout from '@/layouts/LegalLayout.vue';
 import OnboardingLayout from '@/layouts/OnboardingLayout.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useOnboardingStore } from '@/stores/onboarding';
@@ -15,6 +16,15 @@ const router = createRouter({
             children: [
                 { path: 'login', name: 'login', component: () => import('@/pages/LoginPage.vue') },
                 { path: 'auth/callback', name: 'auth-callback', component: () => import('@/pages/AuthCallbackPage.vue') },
+            ],
+        },
+        {
+            path: '/',
+            component: LegalLayout,
+            meta: { public: true },
+            children: [
+                { path: 'privacy', name: 'privacy', component: () => import('@/pages/PrivacyPage.vue') },
+                { path: 'terms', name: 'terms', component: () => import('@/pages/TermsPage.vue') },
             ],
         },
         {

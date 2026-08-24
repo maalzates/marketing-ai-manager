@@ -90,7 +90,7 @@ src/          the Laravel application (app/Modules/, resources/js/, routes/, tes
 docker/       nginx, php.ini, mysql init, observability configs
 scripts/      deploy.sh, setup-production.sh
 spec/         one folder per unit of work (see CLAUDE.md)
-docs/         deployment guide + the two visual canvases
+docs/         deployment guide + the three visual canvases
 .ai/          binding standards for AI agents (architecture, backend, tests)
 SETUP.md      empty machine → working application
 ```
@@ -132,7 +132,7 @@ backups and troubleshooting are all in
 
 ## Visual overview
 
-Two self-contained HTML canvases, kept current as the last step of every change:
+Three self-contained HTML canvases, kept current as the last step of every change:
 
 - [`docs/project-map.html`](./docs/project-map.html) — repo layout, the modules,
   stack, container topology for dev and production, ports, environment files, the
@@ -141,6 +141,9 @@ Two self-contained HTML canvases, kept current as the last step of every change:
   application, the layers, a request end to end, errors and logging, outbound
   API calls and credentials, the proposal/approval invariant, account
   isolation, testing, and how work gets done.
+- [`docs/google-cloud-setup.html`](./docs/google-cloud-setup.html) — the operator
+  walkthrough for Google Cloud Console: the console path, the exact redirect
+  URIs and scopes, and why the consent screen must be published to Production.
 
 Open them straight from the filesystem; no build step, no dependencies.
 

@@ -48,11 +48,17 @@ docker run --rm \
     node:22-alpine \
     sh -c "npm ci --no-audit --no-fund && npm run build"
 
-# 5. Schema.
+# 5. Writable paths. php-fpm runs as www-data, but a fresh clone and anything git writes
+#    lands as root, so Laravel cannot write its log, its cache or a session and every
+#    request becomes a 500 with nothing in the log to explain it.
+echo "==> Fixing writable paths"
+$COMPOSE exec -T app sh -c 'chown -R www-data:www-data storage bootstrap/cache && chmod -R u+rwX storage bootstrap/cache'
+
+# 6. Schema.
 echo "==> Running migrations"
 $COMPOSE exec -T app php artisan migrate --force
 
-# 6. Caches. Clear first — a stale config cache makes the rebuild read old values.
+# 7. Caches. Clear first — a stale config cache makes the rebuild read old values.
 echo "==> Rebuilding caches"
 $COMPOSE exec -T app php artisan optimize:clear
 $COMPOSE exec -T app php artisan config:cache
@@ -60,15 +66,16 @@ $COMPOSE exec -T app php artisan route:cache
 $COMPOSE exec -T app php artisan view:cache
 $COMPOSE exec -T app php artisan event:cache
 
-# 7. Long-running workers hold the old code in memory until restarted.
+# 8. Long-running workers hold the old code in memory until restarted.
 echo "==> Restarting workers"
 $COMPOSE exec -T app php artisan queue:restart
 $COMPOSE restart queue scheduler
 
-# 8. Smoke test through nginx.
+# 9. Smoke test through nginx. Plain HTTP on purpose: TLS terminates at Cloudflare, so
+#    this origin has no 443 listener and no certificate to check against.
 echo "==> Health check"
 for _ in $(seq 1 10); do
-    if curl -fsSk -o /dev/null -H "Host: ${APP_DOMAIN}" "https://127.0.0.1/up"; then
+    if curl -fsS -o /dev/null -H "Host: ${APP_DOMAIN}" "http://127.0.0.1/up"; then
         echo "==> Deploy OK ($(git rev-parse --short HEAD))"
         exit 0
     fi
