@@ -43,7 +43,7 @@ class GoogleLoginTest extends TestCase
 
     public function test_a_first_login_creates_the_user_the_account_and_the_role(): void
     {
-        $this->login()->assertOk();
+        $this->login()->assertRedirectContains('/auth/callback?token=');
 
         $this->assertDatabaseHas('users', ['email' => self::EMAIL, 'google_id' => self::GOOGLE_SUBJECT]);
         $this->assertDatabaseCount('accounts', 1);
@@ -52,7 +52,7 @@ class GoogleLoginTest extends TestCase
 
     public function test_a_first_login_returns_a_usable_api_token(): void
     {
-        $token = $this->login()->assertOk()->json('result.token');
+        $token = $this->tokenFrom($this->login()->assertRedirectContains('/auth/callback?token='));
 
         $this->assertIsString($token);
         $this->withHeader('Authorization', "Bearer {$token}")
@@ -63,8 +63,8 @@ class GoogleLoginTest extends TestCase
 
     public function test_a_second_login_duplicates_neither_the_user_nor_the_account(): void
     {
-        $this->login()->assertOk();
-        $this->login()->assertOk();
+        $this->login()->assertRedirectContains('/auth/callback?token=');
+        $this->login()->assertRedirectContains('/auth/callback?token=');
 
         $this->assertDatabaseCount('users', 1);
         $this->assertDatabaseCount('accounts', 1);
@@ -73,8 +73,8 @@ class GoogleLoginTest extends TestCase
 
     public function test_a_second_login_assigns_the_role_only_once(): void
     {
-        $this->login()->assertOk();
-        $this->login()->assertOk();
+        $this->login()->assertRedirectContains('/auth/callback?token=');
+        $this->login()->assertRedirectContains('/auth/callback?token=');
 
         $this->assertSame(['user'], User::query()->firstOrFail()->roles->pluck('name')->all());
     }
@@ -82,23 +82,23 @@ class GoogleLoginTest extends TestCase
     /** The account is adopted by email, so a user who signed in before keeps the one they had. */
     public function test_a_returning_user_keeps_the_account_they_already_owned(): void
     {
-        $this->login()->assertOk();
+        $this->login()->assertRedirectContains('/auth/callback?token=');
         $accountId = Account::query()->firstOrFail()->id;
 
-        $this->login()->assertOk();
+        $this->login()->assertRedirectContains('/auth/callback?token=');
 
         $this->assertSame($accountId, Account::query()->firstOrFail()->id);
     }
 
     public function test_an_inactive_user_is_refused_and_gets_no_token(): void
     {
-        $this->login()->assertOk();
+        $this->login()->assertRedirectContains('/auth/callback?token=');
         User::query()->firstOrFail()->update(['is_active' => false]);
 
         $response = $this->login();
 
         $response->assertStatus(403);
-        $this->assertNull($response->json('result.token'));
+        $this->assertNull($this->tokenFrom($response));
         $this->assertDatabaseCount('personal_access_tokens', 1);
     }
 
@@ -106,7 +106,7 @@ class GoogleLoginTest extends TestCase
     {
         $this->queueGoogleProfile();
 
-        $this->postJson('/api/v1/auth/google/callback', ['code' => 'x', 'state' => 'never-issued'])
+        $this->get('/api/v1/auth/google/callback?code=x&state=never-issued')
             ->assertStatus(422);
 
         $this->assertDatabaseCount('users', 0);
@@ -117,7 +117,7 @@ class GoogleLoginTest extends TestCase
     {
         $state = $this->issuedState();
         $this->queueGoogleProfile();
-        $this->callbackWith($state)->assertOk();
+        $this->callbackWith($state)->assertRedirectContains('/auth/callback?token=');
 
         $this->queueGoogleProfile();
         $this->callbackWith($state)->assertStatus(422);
@@ -187,9 +187,21 @@ class GoogleLoginTest extends TestCase
         return $this->callbackWith($state);
     }
 
+    /** Google sends the browser here, so it is a GET answered with a redirect into the SPA. */
     private function callbackWith(string $state): TestResponse
     {
-        return $this->postJson('/api/v1/auth/google/callback', ['code' => 'auth-code-abc', 'state' => $state]);
+        return $this->get('/api/v1/auth/google/callback?'.http_build_query([
+            'code' => 'auth-code-abc',
+            'state' => $state,
+        ]));
+    }
+
+    /** The token the SPA picks up, read back out of the redirect it was handed. */
+    private function tokenFrom(TestResponse $response): ?string
+    {
+        parse_str((string) parse_url((string) $response->headers->get('Location'), PHP_URL_QUERY), $query);
+
+        return $query['token'] ?? null;
     }
 
     private function issuedState(): string

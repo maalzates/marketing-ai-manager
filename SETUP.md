@@ -116,7 +116,7 @@ Left at their defaults, both sides already agree and there is nothing to do.
 | `APP_ENV` | Environment name | fixed for local | `local` | I |
 | `APP_KEY` | Laravel's encryption key. **Encrypts every stored user credential.** Empty until generated | `make up` runs `php artisan key:generate` when it is missing | `base64:Yx3f…=` | P |
 | `APP_DEBUG` | Full stack traces in responses | `true` locally, never in production | `true` | I |
-| `APP_URL` | Base URL. **`route()` builds the OAuth callback URIs from this**, so it must match the port you actually browse | you | `http://localhost:8080` | P |
+| `APP_URL` | Base URL. **`route()` builds the OAuth callback URIs from this**, so it must match the port you actually browse | you | `http://localhost` | P |
 | `APP_LOCALE` | Default locale | you | `en` | I |
 | `APP_FALLBACK_LOCALE` | Locale used when a translation is missing | you | `en` | I |
 | `APP_FAKER_LOCALE` | Locale for factory data | you | `en_US` | I |
@@ -200,7 +200,7 @@ assets are stored in the user's Drive.
 | Variable | What it is | Example | Scope |
 |---|---|---|---|
 | `VITE_APP_NAME` | Name exposed to the SPA | `"${APP_NAME}"` | I |
-| `VITE_DEV_SERVER_URL` | Where the browser reaches Vite. The `node` container serves it on the host port, so this is a `localhost` URL even though the app runs in Docker | `http://localhost:5173` | I |
+| `VITE_DEV_SERVER_URL` | Where the browser reaches Vite. nginx proxies the dev server, so this is the app's own origin with no extra port — and `5173` is deliberately not published | `http://localhost` | I |
 
 #### Platform credentials — the ones you actually have to fill in
 
@@ -209,10 +209,9 @@ assets are stored in the user's Drive.
 | `ADMIN_EMAILS` | Comma-separated emails that receive the `admin` role **on their first Google login**. Everyone else gets `user`. Read by `config/accounts.php` | you | `maalzates@gmail.com` (the default) or `you@example.com,other@example.com` | P |
 | `GOOGLE_CLIENT_ID` | OAuth 2.0 client id | Google Cloud Console → §4.1 | `1234987819200.apps.googleusercontent.com` | P |
 | `GOOGLE_CLIENT_SECRET` | OAuth 2.0 client secret | same client | `GOCSPX-…` | P |
-| `GOOGLE_REDIRECT_URI` | Sign-in callback. Must be registered byte-identically in the console | you | `http://localhost:8080/api/v1/auth/google/callback` | P |
 | `META_APP_ID` | Meta app id | developers.facebook.com → §4.2 | `1234567890123456` | P |
 | `META_APP_SECRET` | Meta app secret | same app | 32 hex characters | P |
-| `META_REDIRECT_URI` | Meta OAuth callback | you | `http://localhost:8080/api/v1/integrations/meta/oauth/callback` | P |
+| `META_REDIRECT_URI` | Meta OAuth callback | you | `http://localhost/api/v1/integrations/meta/oauth/callback` | P |
 | `META_GRAPH_VERSION` | Graph API version the app targets. Pinned in one place on purpose | fixed unless you are migrating | `v26.0` | P |
 
 **A redirect-URI subtlety that will cost you an afternoon.** The integrations
@@ -221,7 +220,8 @@ environment variable (`IntegrationOAuthService::redirectUri()`), because the val
 must be byte-identical in the authorisation request and in the code exchange.
 `route()` builds it from `APP_URL`. So:
 
-- `APP_URL` must be exactly the origin you browse (`http://localhost:8080`).
+- `APP_URL` must be exactly the origin you browse (`http://localhost`, or with the
+  port if you overrode `HTTP_PORT`).
 - **Google needs more than one redirect URI registered**: the sign-in callback
   *and* the Drive integration callback, plus the YouTube one if you enable it.
   See §4.1 step 9 for the full list.
@@ -345,12 +345,14 @@ for the asset library, and YouTube Data if you enable it.
    the port and the absence of a trailing slash:
 
    ```
-   http://localhost:8080/api/v1/auth/google/callback
-   http://localhost:8080/api/v1/integrations/google/oauth/callback
-   http://localhost:8080/api/v1/integrations/youtube/oauth/callback
+   http://localhost/api/v1/auth/google/callback
+   http://localhost/api/v1/integrations/google/oauth/callback
+   http://localhost/api/v1/integrations/youtube/oauth/callback
    ```
 
-   The first is sign-in (`GOOGLE_REDIRECT_URI`). The second is the Drive
+   The first is sign-in. It has no environment variable of its own: it is derived
+   from `APP_URL` in `config/services.php`, so set `APP_URL` right and the two can
+   never drift apart. The second is the Drive
    connection made during onboarding. The third is only needed if you enabled
    YouTube. **Registering only the first is the most common Google setup error.**
 10. Copy the **Client ID** and **Client Secret** into `src/.env` as
@@ -400,7 +402,7 @@ and read from `config('services.meta.graph_version')`.
    OAuth Redirect URIs**, exactly:
 
    ```
-   http://localhost:8080/api/v1/integrations/meta/oauth/callback
+   http://localhost/api/v1/integrations/meta/oauth/callback
    ```
 
 6. Add every person who will use the app under **App Roles → Roles**, as
@@ -632,15 +634,15 @@ Everything below must pass before you consider the environment working.
 
 | # | Check | Command | Expected |
 |---|---|---|---|
-| 1 | The app answers | `curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080` | `200` |
-| 2 | The API envelope | `curl -s http://localhost:8080/api/health` | `{"result":{"status":"ok"},"errors":[]}` |
-| 3 | Laravel's own probe | `curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/up` | `200` |
+| 1 | The app answers | `curl -s -o /dev/null -w '%{http_code}\n' http://localhost` | `200` |
+| 2 | The API envelope | `curl -s http://localhost/api/health` | `{"result":{"status":"ok"},"errors":[]}` |
+| 3 | Laravel's own probe | `curl -s -o /dev/null -w '%{http_code}\n' http://localhost/up` | `200` |
 | 4 | The queue worker is up | `docker compose ps queue` | State `running` (it runs `php artisan queue:work --tries=3 --timeout=120`) |
 | 5 | Every container is up | `docker compose ps` | `app`, `queue`, `nginx`, `node`, `db`, `redis`, `mailpit` all running; `db` healthy |
 | 6 | Migrations applied | `make artisan CMD="migrate:status"` | Every migration `Ran` |
 | 7 | Seeds applied | `docker compose exec -T db sh -c 'MYSQL_PWD=secret mysql -umarketing_ai marketing_ai -e "select name from roles"'` | `admin` and `user` |
 | 8 | The suite passes | `make test` | All green |
-| 9 | Vite is serving | open <http://localhost:5173> | Responds (the SPA is loaded through :8080, not directly) |
+| 9 | Vite is serving | `curl -s -o /dev/null -w '%{http_code}\n' http://localhost/@vite/client` | `200` — nginx proxies the dev server; `5173` is not published |
 | 10 | Mailpit is up | open <http://localhost:8025> | The Mailpit inbox |
 
 `GET /api/health` is deliberately unversioned — an infrastructure liveness probe
@@ -656,7 +658,7 @@ Grafana at <http://localhost:3000> (admin/admin).
 
 ### Sign in
 
-Open <http://localhost:8080> and sign in with Google. There is **no email and
+Open <http://localhost> and sign in with Google. There is **no email and
 password** — the system has no passwords at all, by design: no reset flow, no
 credential stuffing, less to get wrong. The first login creates the account, the
 `account` record everything else hangs off, and assigns the role.

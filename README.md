@@ -32,14 +32,20 @@ to re-run; use `make start` for a plain resume.
 
 | Service | URL |
 |---|---|
-| Application | http://localhost:8080 |
-| Vite dev server | http://localhost:5173 |
+| Application | http://localhost |
 | Mailpit | http://localhost:8025 |
 | MySQL | `127.0.0.1:3307` |
 | Redis | `127.0.0.1:6380` |
 | Grafana (optional profile) | http://localhost:3000 — admin/admin |
 
-Ports are overridable: `HTTP_PORT=9000 make up`.
+Ports are overridable: `HTTP_PORT=8080 make up`. Do that if something else already
+holds port 80 on your machine; the Makefile prints whichever port it ended up on.
+
+**Hot reload needs nothing running on the host.** The `node` container runs the Vite
+dev server, nginx proxies it, and Laravel points at it through `src/public/hot`. So
+there is no second port to open and no `npm run dev` to remember — the whole
+application, assets included, is served from one origin. That also keeps asset URLs
+identical in development and production, which is the actual reason for the proxy.
 
 The application will start without a single provider credential, and will not do
 much: signing in needs the Google OAuth client from `src/.env`, and everything else
@@ -126,9 +132,26 @@ TailwindCSS 4 · Vite · nginx · Docker Compose
 Push to `main`. CI runs Pint, PHPUnit and a production frontend build; if it
 passes, the deploy workflow SSHes into the VPS and runs `scripts/deploy.sh`.
 
-Setting up a new server, the environment files, TLS, GitHub secrets, rollback,
-backups and troubleshooting are all in
-[`docs/deployment.md`](./docs/deployment.md).
+**TLS terminates at Cloudflare, in Flexible mode.** The origin serves plain HTTP on
+port 80, holds no certificate and runs no certbot. Two consequences that are easy to
+break by accident:
+
+- The hop from Cloudflare to the box is unencrypted, so UFW allows port 80 **only
+  from Cloudflare's ranges**. Opening it to the world would put traffic in the clear
+  for anyone who finds the origin IP.
+- The visitor's real IP and scheme arrive in headers, so Laravel trusts proxies and
+  nginx restores the client IP. Trusting every proxy is safe *because* of the
+  firewall rule above; the two are one decision, not two.
+
+Two systemd timers keep that working without attention: one refreshes Cloudflare's
+ranges weekly for both nginx and the firewall, the other refreshes GitHub Actions'
+ranges daily so fail2ban never bans the runner that deploys. Without the second one,
+deploys start failing weeks later with nothing in the CI log to explain it.
+
+Setting up a new server, the environment files, GitHub secrets, rollback, backups and
+troubleshooting are in [`docs/deployment.md`](./docs/deployment.md). What was actually
+run on the production box is recorded in
+`spec/2026-08-24-chore-production-setup/server-log.md`.
 
 ## Visual overview
 

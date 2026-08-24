@@ -47,7 +47,7 @@ Route::prefix('v1')->group(function (): void {
     // --- Auth ---------------------------------------------------------------
     Route::prefix('auth')->group(function (): void {
         Route::get('google/redirect', [AuthController::class, 'redirect']);
-        Route::match(['get', 'post'], 'google/callback', [AuthController::class, 'callback']);
+        Route::get('google/callback', [AuthController::class, 'callback']);
 
         Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('me', [AuthController::class, 'me']);

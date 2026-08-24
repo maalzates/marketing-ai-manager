@@ -52,7 +52,9 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI'),
+        // Derived, never configured: a second source of truth for this value drifts from
+        // what is registered in the Google console, and Google answers `redirect_uri_mismatch`.
+        'redirect' => rtrim((string) env('APP_URL'), '/').'/api/v1/auth/google/callback',
         'auth_url' => 'https://accounts.google.com/o/oauth2/v2/auth',
         'token_url' => 'https://oauth2.googleapis.com/token',
         'revoke_url' => 'https://oauth2.googleapis.com/revoke',

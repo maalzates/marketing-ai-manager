@@ -8,6 +8,7 @@ use App\Modules\Auth\Application\Services\AuthService;
 use App\Modules\Auth\Presentation\Http\Requests\GoogleCallbackRequest;
 use App\Modules\Core\Presentation\Http\Controllers\Api\ApiController;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -27,10 +28,20 @@ class AuthController extends ApiController
         return $this->response->success($this->service->authorisationUrl());
     }
 
-    /** Public: Google calls it. The single-use `state` is what proves we issued the request. */
-    public function callback(GoogleCallbackRequest $request): JsonResponse
+    /**
+     * Public: Google sends the browser here, so the answer is a redirect and not the JSON
+     * envelope — the SPA reads the token off the query and trades it for `/auth/me`.
+     * The single-use `state` is what proves we issued the request.
+     */
+    public function callback(GoogleCallbackRequest $request): RedirectResponse
     {
-        return $this->response->success($this->service->handleCallback($request->code(), $request->state()));
+        $authenticated = $this->service->handleCallback($request->code(), $request->state());
+
+        return redirect()->away(sprintf(
+            '%s/auth/callback?%s',
+            rtrim((string) config('app.url'), '/'),
+            http_build_query(['token' => $authenticated->token]),
+        ));
     }
 
     public function me(Request $request): JsonResponse

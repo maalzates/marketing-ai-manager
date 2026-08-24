@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { TOKEN_KEY } from '@/bootstrap';
-import { exchange, googleRedirectUrl, logout as logoutRequest, me } from '@/repositories/authRepository';
+import { googleRedirectUrl, logout as logoutRequest, me } from '@/repositories/authRepository';
 import { useAsyncState } from '@/stores/useAsyncState';
 import { useUiStore } from '@/stores/ui';
 
@@ -37,18 +37,13 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
-    async function completeLogin(code, state) {
-        const result = await run(() => exchange(code, state), 'Sesión iniciada.');
+    async function adoptToken(granted) {
+        token.value = granted;
+        localStorage.setItem(TOKEN_KEY, granted);
 
-        if (!result?.access_token) {
-            return false;
-        }
-
-        token.value = result.access_token;
-        localStorage.setItem(TOKEN_KEY, result.access_token);
-        apply(result);
-
-        return true;
+        // The redirect carries the token and nothing else: /me is what settles the user,
+        // the account and the roles the router guard reads.
+        return fetchMe();
     }
 
     async function fetchMe() {
@@ -80,7 +75,7 @@ export const useAuthStore = defineStore('auth', () => {
         isAuthenticated,
         isAdmin,
         login,
-        completeLogin,
+        adoptToken,
         fetchMe,
         logout,
         clear,
