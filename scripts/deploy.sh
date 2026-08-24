@@ -66,10 +66,15 @@ $COMPOSE exec -T app php artisan route:cache
 $COMPOSE exec -T app php artisan view:cache
 $COMPOSE exec -T app php artisan event:cache
 
-# 8. Long-running workers hold the old code in memory until restarted.
+# 8. Everything holding compiled code in memory has to let go of it.
+#
+#    php.prod.ini sets opcache.validate_timestamps=0, so php-fpm never re-reads a file it
+#    has already compiled — including bootstrap/cache/config.php. Without restarting `app`,
+#    a deploy rebuilds the config cache and the running workers keep serving the previous
+#    one: new code and new credentials appear to have no effect, with nothing in the logs.
 echo "==> Restarting workers"
 $COMPOSE exec -T app php artisan queue:restart
-$COMPOSE restart queue scheduler
+$COMPOSE restart app queue scheduler
 
 # 9. Smoke test through nginx. Plain HTTP on purpose: TLS terminates at Cloudflare, so
 #    this origin has no 443 listener and no certificate to check against.
