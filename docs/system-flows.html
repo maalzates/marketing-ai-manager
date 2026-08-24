@@ -17,9 +17,9 @@
        estructura y los contenedores, el otro canvas:
        <a href="project-map.html">Mapa del proyecto</a>.</p>
     <div class="meta">
-      <span><b>Patrón</b> monolito modular · DDD</span>
-      <span><b>Convergencia</b> la capa de Services</span>
-      <span><b>Invariante</b> ninguna puerta la esquiva</span>
+      <span><b>Patrón</b> monolito modular · DDD · 20 módulos</span>
+      <span><b>Puertas</b> 106 rutas · 8 tools de chat · 8 jobs programados</span>
+      <span><b>Invariante</b> el asistente propone, la persona ejecuta</span>
     </div>
   </div>
 </header>
@@ -106,6 +106,47 @@
     no duplica ni una regla.</figcaption>
   </figure>
 
+  <h3>Las puertas que existen hoy</h3>
+  <table>
+    <tr><th>Puerta</th><th>Cuántas</th><th>Dónde</th></tr>
+    <tr>
+      <td><b>HTTP</b></td>
+      <td>106 rutas bajo <code>/api/v1</code></td>
+      <td><code>routes/api.php</code>, agrupadas por módulo</td>
+    </tr>
+    <tr>
+      <td><b>Tool del chat</b></td>
+      <td>8 — cinco de lectura, tres de mutación</td>
+      <td><code>{Módulo}/Presentation/Tools/</code>, registradas en el provider del módulo</td>
+    </tr>
+    <tr>
+      <td><b>Job programado</b></td>
+      <td>8</td>
+      <td><code>routes/console.php</code>: salud de integraciones, competidores, métricas de
+          campaña, métricas propias, guardián, veredictos, publicación y snapshot de audiencia</td>
+    </tr>
+    <tr>
+      <td><b>Servidor MCP</b></td>
+      <td>—</td>
+      <td>futuro; reusará el mismo <code>ToolRegistry</code></td>
+    </tr>
+  </table>
+
+  <div class="card amber">
+    <h4>Dos rutas que viven fuera de <code>/api/v1</code>, y por qué</h4>
+    <p><code>GET /api/health</code> se dejó <b>sin versionar</b>: es una sonda de vida de
+       infraestructura, y una sonda que se mueve cuando cambia la versión de la API es una
+       sonda que deja de sondear sin avisar.</p>
+    <p><code>GET /media/{token}</code> vive en <code>routes/web.php</code>, fuera de
+       <code>/api</code> y <b>sin autenticación</b>. No es un descuido: la API de publicación
+       de Instagram es <i>pull</i> —Meta descarga la pieza de una URL pública y su fetcher no
+       lleva bearer token—, así que ningún middleware la dejaría pasar. El token del path es
+       toda la autorización: HMAC-SHA256 sobre <code>APP_KEY</code>, acotado a un asset y una
+       cuenta, con caducidad de 24 h (la vida de un contenedor de Instagram) y un nonce por
+       emisión. La respuesta hace stream desde Drive al socket: nada se escribe en esta
+       máquina.</p>
+  </div>
+
   <div class="split3">
     <div class="card blue">
       <h4>Las puertas no deciden</h4>
@@ -165,10 +206,37 @@
   </table>
 
   <div class="card amber">
-    <h4>Entre módulos</h4>
-    <p>Un módulo puede depender del <b>Service</b> de otro. Nunca de su repositorio, su
-       modelo ni su cliente. Alcanzar <code>App\Modules\Otro\Infrastructure\…</code> es como
-       un monolito modular se convierte en un monolito normal con carpetas de más.</p>
+    <h4>Entre módulos: la línea está en el uso, no en el import</h4>
+    <p>Un módulo puede depender del <b>Service</b> de otro. Nunca de su repositorio ni de su
+       cliente. Con el modelo hay que ser preciso, porque la formulación obvia se contradice
+       a sí misma: si un repositorio devuelve <code>Model</code>, el Service también, y quien
+       llame a ese Service está obligado a nombrar ese tipo.</p>
+    <p><b>Tipar el modelo de otro módulo es legítimo; consultarlo no.</b> Un
+       <code>Experiment::where(…)</code> desde fuera de <code>Experiments</code> se salta el
+       Service que guarda los invariantes de ese módulo, empezando por el filtro de
+       <code>account_id</code>. Un type hint no se salta nada.</p>
+  </div>
+
+  <div class="card blue">
+    <h4>El contrato vive en el módulo que pregunta</h4>
+    <p>Cuando un módulo necesita una respuesta que otro tiene, <b>declara él la interfaz</b>;
+       el que responde la implementa y registra el binding en su propio provider. Declararla
+       junto a la implementación produce un ciclo, y los ciclos son invisibles fichero a
+       fichero: durante la construcción inicial aparecieron dos.</p>
+    <p>El compañero de esa regla es un peligro: el <code>bindIf</code> con objeto nulo que
+       permite arrancar suelto <b>tiene que fallar cerrado</b>. Un default que permite en
+       silencio es peor que el binding que falta, porque el binding que falta revienta el
+       contenedor y alguien lo arregla en un minuto.</p>
+  </div>
+
+  <div class="card green">
+    <h4>Y se prueba, no se confía</h4>
+    <p><code>tests/Feature/Core/ModuleBoundariesTest.php</code> verifica cinco cosas sobre el
+       árbol de código: que ningún módulo use el repositorio o el cliente de otro, que
+       ninguno <b>consulte</b> el modelo de otro, que el grafo de dependencias no tenga
+       ciclos, que nada bajo <code>Presentation/Tools/</code> alcance
+       <code>ProposalExecutionService</code>, y que todo fichero declare
+       <code>strict_types</code>.</p>
   </div>
 </div>
 </section>
@@ -179,7 +247,8 @@
 
   <div class="pipeline">
     <div class="step"><h5>nginx</h5><p>Assets y <code>/api/*</code>; el resto a php-fpm</p></div>
-    <div class="step"><h5>Ruta</h5><p><code>api.php</code> para JSON; <code>web.php</code> es un catch-all para la SPA</p></div>
+    <div class="step"><h5>Ruta</h5><p><code>api.php</code> bajo <code>/api/v1</code>; <code>web.php</code> lleva <code>/media/{token}</code> y el catch-all de la SPA</p></div>
+    <div class="step"><h5>Middleware</h5><p><code>auth:sanctum</code> · <code>EnsureAccountContext</code> · <code>EnsureRole</code> en admin</p></div>
     <div class="step"><h5>FormRequest</h5><p>transforma, valida, mapea a DTO</p></div>
     <div class="step"><h5>Controller</h5><p>una línea: pasa el DTO y envuelve la respuesta</p></div>
   </div>
@@ -284,7 +353,8 @@
 <section id="externas">
 <div class="wrap">
   <h2><span class="n">05</span> Llamar a una API externa</h2>
-  <p>YouTube, Instagram Graph, Meta Marketing, Apify, el LLM. Todas siguen la misma forma.</p>
+  <p>Instagram Graph, Meta Marketing, Google Drive, YouTube, Apify y los tres proveedores de
+     LLM. Todas siguen la misma forma.</p>
 
   <figure>
   <svg viewBox="0 0 1080 250" role="img" aria-label="Cadena de una llamada saliente">
@@ -295,7 +365,7 @@
     <path class="edge-strong" d="M180 61 L228 61" marker-end="url(#f3)"/>
 
     <rect class="box box-purple" x="228" y="30" width="220" height="62" rx="10"/>
-    <text class="t-title" x="338" y="54" text-anchor="middle">YoutubeClient</text>
+    <text class="t-title" x="338" y="54" text-anchor="middle">MetaAdsClient</text>
     <text class="t-mono" x="338" y="72" text-anchor="middle">endpoints como constantes</text>
 
     <path class="edge-strong" d="M448 61 L496 61" marker-end="url(#f3)"/>
@@ -353,6 +423,20 @@
 
   <p><code>env()</code> no se llama nunca fuera de <code>config/</code>: en producción la
      configuración está cacheada y devuelve <code>null</code>.</p>
+
+  <div class="card purple">
+    <h4>Por qué esta aplicación no usa <code>laravel/ai</code></h4>
+    <p>El SDK existe y es compatible con Laravel 13, pero no admite una API key por llamada
+       en tiempo de ejecución: obliga a escribir la key del usuario en
+       <code>config('ai.providers.*')</code>, donde queda expuesta en
+       <code>php artisan about</code> y en cualquier volcado de configuración de una página
+       de error. Con BYOK eso es descalificante. Los clientes son propios, sobre
+       <code>ApiClientAbstract</code>, construidos por
+       <code>LlmClientFactory::forAccount()</code>.</p>
+    <p>Por la misma clase de razón tampoco se usa Socialite: exige Guzzle <code>^6|^7</code>
+       y aquí corre Guzzle 8. El OAuth de Google y el de Meta son clientes propios en el
+       módulo <code>Integrations</code>.</p>
+  </div>
 </div>
 </section>
 
@@ -368,7 +452,7 @@
     <line x1="540" y1="24" x2="540" y2="310" stroke="#dfe6f0" stroke-width="1.5" stroke-dasharray="6 5"/>
 
     <rect class="box box-purple" x="0" y="34" width="230" height="62" rx="10"/>
-    <text class="t-title" x="115" y="60" text-anchor="middle">PauseCampaignTool</text>
+    <text class="t-title" x="115" y="60" text-anchor="middle">ProposePauseTool</text>
     <text class="t-mono" x="115" y="78" text-anchor="middle">tool de mutación</text>
 
     <path class="edge-strong" d="M230 65 L286 65" marker-end="url(#g3)"/>
@@ -387,12 +471,13 @@
     <text class="t-mono" x="752" y="190">pulsa aceptar</text>
 
     <rect class="box box-green" x="620" y="196" width="240" height="56" rx="10"/>
-    <text class="t-title" x="740" y="219" text-anchor="middle">POST /proposals/{id}/accept</text>
-    <text class="t-mono" x="740" y="238" text-anchor="middle">puerta que el LLM no conoce</text>
+    <text class="t-title" x="740" y="217" text-anchor="middle">POST /api/v1/proposals/{id}/accept</text>
+    <text class="t-mono" x="740" y="236" text-anchor="middle">puerta que el LLM no conoce</text>
 
     <path class="edge-strong" d="M740 252 L740 282" marker-end="url(#g3)"/>
     <rect class="box box-green" x="620" y="282" width="240" height="44" rx="10"/>
-    <text class="t-title" x="740" y="310" text-anchor="middle">CampaignPauseService</text>
+    <text class="t-title" x="740" y="303" text-anchor="middle">ProposalExecutionService</text>
+    <text class="t-mono" x="740" y="320" text-anchor="middle">solo AcceptProposalController lo resuelve</text>
 
     <path class="edge-red" d="M115 96 L115 300 L345 300"/>
     <circle cx="360" cy="300" r="15" fill="#fef1f2" stroke="#c02a37" stroke-width="1.5"/>
@@ -410,6 +495,22 @@
   <figcaption>Las tools de lectura sí ejecutan directamente: consultar métricas o listar
     campañas no cambia nada ni cuesta dinero.</figcaption>
   </figure>
+
+  <p>El guardián diario obedece la misma regla: detecta la anomalía con aritmética pura,
+     usa el LLM solo para redactar el porqué, y termina escribiendo una propuesta. Tampoco
+     ejecuta.</p>
+
+  <h3>Dos estados finales, y la diferencia importa</h3>
+  <table>
+    <tr><th>Estado</th><th>Significa</th><th>Quién lo produce</th></tr>
+    <tr><td><code>executed</code></td><td>la plataforma <b>confirmó</b> la mutación</td><td><code>close_experiment</code>, que es síncrono</td></tr>
+    <tr><td><code>executing</code></td><td>el trabajo se encoló; nadie ha confirmado nada</td><td><code>create_campaign</code>, que valida en caliente y despacha <code>LaunchCampaignJob</code></td></tr>
+    <tr><td><code>failed</code></td><td>la ejecución reventó, con el motivo guardado</td><td>cualquiera. La excepción se relanza intacta para que el handler la registre una vez</td></tr>
+  </table>
+  <p>Una propuesta aceptada nunca se queda en <code>accepted</code> sin más: si se quedara,
+     la interfaz seguiría ofreciendo el botón y el siguiente clic ejecutaría la mutación por
+     segunda vez. Y una propuesta ya decidida o caducada rechaza la segunda decisión, así que
+     un doble clic no ejecuta dos veces.</p>
 
   <div class="split">
     <div class="card green">
@@ -435,13 +536,34 @@
      añadimos».</p>
 
   <div class="pipeline">
-    <div class="step"><h5>Tabla</h5><p>toda tabla de usuario lleva <code>account_id</code></p></div>
+    <div class="step"><h5>Middleware</h5><p><code>EnsureAccountContext</code> resuelve la cuenta activa y la pone en <code>AccountContext</code></p></div>
+    <div class="step"><h5>Tabla</h5><p>toda tabla de inquilino lleva <code>account_id</code></p></div>
     <div class="step"><h5>DTO</h5><p>la cuenta viaja dentro; no en una global ni en la sesión</p></div>
     <div class="step"><h5>Repository</h5><p><code>-&gt;where('account_id', …)</code>, siempre</p></div>
     <div class="step"><h5>Prueba</h5><p>dos cuentas, y se afirma que no se ven entre sí</p></div>
   </div>
 
-  <p>Ningún Service, Tool ni Job alcanza datos de otra cuenta.</p>
+  <p>Ningún Service, Tool ni Job alcanza datos de otra cuenta. El
+     <code>EnsureAccountContext</code> corre en todas las rutas que tocan datos de inquilino;
+     las tres excepciones —<code>/auth/me</code>, <code>/auth/logout</code> y
+     <code>/knowledge/*</code>— son deliberadas: funcionan para un usuario que todavía no
+     tiene cuenta resuelta.</p>
+
+  <div class="card red">
+    <h4>Un recurso de otra cuenta es un 404, nunca un 403</h4>
+    <p>Un 403 confirma que el id existe, y eso ya es información. Los Services buscan con el
+       <code>account_id</code> incluido en la consulta y lanzan la excepción de «no
+       encontrado» cuando no hay fila, así que la respuesta es idéntica para un id inexistente
+       y para uno ajeno.</p>
+  </div>
+
+  <div class="card blue">
+    <h4>Y las credenciales también están aisladas</h4>
+    <p>Cada cuenta guarda las suyas cifradas en <code>integrations</code>. El recurso HTTP
+       jamás devuelve el valor: solo <code>****</code> más los últimos cuatro caracteres, para
+       que el usuario reconozca cuál tiene puesta. Y todo lo que llega a un action log o al
+       <code>context</code> de una excepción pasa antes por <code>SecretMasker</code>.</p>
+  </div>
 </div>
 </section>
 
@@ -501,11 +623,33 @@
          <code>Http::fake()</code>) y el LLM. <b>Nunca</b> un repositorio ni un Service —
          mockear lo que estás probando es como una suite en verde esconde una funcionalidad
          rota.</p>
+      <p>El LLM se falsea con <code>FakeLlmClient</code>, que reproduce un fichero de
+         <code>tests/Fixtures/llm/</code> a través del adaptador <b>real</b> del proveedor.
+         De dónde salió cada fixture, y qué parte del cuerpo es literal de la documentación
+         oficial y qué parte está compuesta, está en
+         <code>tests/Fixtures/llm/SOURCES.md</code>. Un fixture no se edita para que un test
+         pase: son copias, y la fuente es la investigación.</p>
     </div>
   </div>
 
   <p>Redis, la red y las credenciales del LLM se quedan fuera: caché en array, cola
      <code>sync</code>, mailer en array.</p>
+
+  <div class="card amber">
+    <h4>Suites en paralelo: un esquema por suite</h4>
+    <p>Dos suites con <code>RefreshDatabase</code> contra el mismo esquema producen
+       <code>SQLSTATE[40001] Deadlock found</code>, que <b>se lee como defecto de aplicación y
+       no lo es</b>. Cada suite concurrente corre contra
+       <code>marketing_ai_testing_{a,b,c,d,main}</code> vía
+       <code>-e DB_DATABASE</code>, que sí sobrescribe <code>phpunit.xml</code>.</p>
+    <p>Por eso <code>MigrationsTest</code> comprueba el <b>prefijo</b> del nombre del esquema
+       y no el nombre exacto: los esquemas paralelos son destinos legítimos, y una
+       comprobación exacta fallaría en cada ejecución paralela. El prefijo sigue cazando lo
+       único para lo que ese test existe, que es alguien apuntando la suite a sqlite.</p>
+    <p>Esos esquemas viven solo en el contenedor de MySQL: no están en el
+       <code>Makefile</code> ni en <code>docker/mysql/</code>, así que recrear el volumen los
+       borra.</p>
+  </div>
 </div>
 </section>
 

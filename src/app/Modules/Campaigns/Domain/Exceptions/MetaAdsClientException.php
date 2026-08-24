@@ -20,7 +20,7 @@ class MetaAdsClientException extends ClientException
 {
     private const string FALLBACK_MESSAGE = 'La plataforma de anuncios rechazó la operación.';
 
-    public static function fromApiCallFailedException(ApiCallFailedException $exception): self
+    public static function fromApiCallFailedException(ApiCallFailedException $exception): static
     {
         $error = $exception->getContext()['response_body']['error'] ?? [];
 

@@ -39,8 +39,40 @@ predate it.
 
 This costs a couple of seconds per run and buys the thing repository tests exist
 for: JSON columns, `ENUM`, collations, strict mode and `ONLY_FULL_GROUP_BY`
-behave as they will in production. `tests/Feature/Core/MigrationsTest.php` fails
-the moment someone points the suite back at sqlite.
+behave as they will in production.
+
+`tests/Feature/Core/MigrationsTest.php` fails the moment someone points the suite
+back at sqlite. It asserts the schema-name **prefix**, not the exact name, and
+that is not laziness: the parallel schemas below are all legitimate targets, so an
+exact-match assertion would fail every parallel run. The prefix still catches the
+one thing the test exists for.
+
+### Running suites in parallel
+
+Two suites using `RefreshDatabase` against the same schema produce
+`SQLSTATE[40001] Deadlock found`. That failure reads exactly like an application
+bug and is not one — a whole debugging round was lost to it once.
+
+Each concurrent suite gets its own schema:
+
+```bash
+docker compose exec -T -e DB_DATABASE=marketing_ai_testing_a app php artisan test --filter=Foo
+docker compose exec -T -e DB_DATABASE=marketing_ai_testing_b app php artisan test --filter=Bar
+```
+
+`-e DB_DATABASE` **does** override the value in `phpunit.xml`. The schemas
+`marketing_ai_testing_{a,b,c,d,main}` are created by hand and live only in the
+MySQL container — they are not in the `Makefile` and not in
+`docker/mysql/01-create-testing-database.sql`, so recreating the volume removes
+them:
+
+```bash
+for s in a b c d main; do
+  docker compose exec -T db sh -c "MYSQL_PWD=\"\$MYSQL_ROOT_PASSWORD\" mysql -uroot -e \
+    \"CREATE DATABASE IF NOT EXISTS marketing_ai_testing_$s CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; \
+      GRANT ALL ON marketing_ai_testing_$s.* TO 'marketing_ai'@'%'; FLUSH PRIVILEGES;\""
+done
+```
 
 Everything else stays out of the way: `CACHE_STORE=array`, `QUEUE_CONNECTION=sync`,
 `MAIL_MAILER=array`, `SESSION_DRIVER=array`. No Redis, no network, no LLM
@@ -108,7 +140,17 @@ response.
 
 ## Fixtures for LLM work
 
-Responses from Claude are recorded once and stored under
-`tests/Fixtures/llm/`. Tests bind a fake client that replays the fixture. When
-the prompt changes, re-record the fixture deliberately and say so in the spec —
-never let the suite start hitting the live API to "fix" a mismatch.
+Provider response bodies live under `tests/Fixtures/llm/`. Tests bind
+`FakeLlmClient`, which replays a fixture through the **real** provider adapter, so
+the parsing, the token normalisation and the error translation under test are the
+ones that ship.
+
+`tests/Fixtures/llm/SOURCES.md` records where every fixture came from: which
+section of `spec/2026-08-23-initial-app-development/research/llm-providers.md`,
+and which parts of the body are verbatim from official documentation versus
+composed for the test. Read it before trusting a field.
+
+**Never edit a fixture to make a test pass.** The fixtures are copies, not
+sources — if a body is wrong, the research file is the thing to correct first.
+When the prompt changes, re-record deliberately and say so in the spec; never let
+the suite start hitting the live API to "fix" a mismatch.

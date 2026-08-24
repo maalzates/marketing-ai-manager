@@ -9,6 +9,10 @@ use App\Modules\Core\Domain\Exceptions\ClientException;
 use App\Modules\Core\Domain\Support\SecretMasker;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Google writes one error text and it is developer-facing, so nothing in the response is
+ * ours to publish: the message here is authored, the provider's stays in the context.
+ */
 class YoutubeApiException extends ClientException
 {
     public static function fromApiCall(ApiCallFailedException $exception, string $operation): self
@@ -16,7 +20,7 @@ class YoutubeApiException extends ClientException
         $error = $exception->getContext()['response_body']['error'] ?? [];
 
         $failure = new self(
-            $error['message'] ?? 'YouTube rejected the request.',
+            'YouTube rejected the request.',
             Response::HTTP_BAD_GATEWAY,
             $exception,
         );

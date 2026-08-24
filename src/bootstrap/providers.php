@@ -25,7 +25,9 @@ use App\Providers\AppServiceProvider;
 return [
     AppServiceProvider::class,
 
-    // One entry per module. Keep alphabetical; Core first because everything depends on it.
+    // Core first: everything depends on it. The rest are NOT alphabetical and must not be
+    // reordered blindly — a module binding a contract another module declares has to register
+    // after that module's bindIf default, or the safe fallback wins over the real implementation.
     CoreServiceProvider::class,
     ReportingServiceProvider::class,
     OnboardingServiceProvider::class,

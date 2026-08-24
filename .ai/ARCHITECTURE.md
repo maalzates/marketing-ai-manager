@@ -13,8 +13,9 @@ marketing-ai-manager/
 │   ├── database/migrations/
 │   ├── resources/js/        # the Vue SPA
 │   ├── resources/views/app.blade.php   # the single blade entrypoint
-│   ├── routes/api.php       # every JSON endpoint
-│   ├── routes/web.php       # catch-all that renders app.blade.php
+│   ├── routes/api.php       # every JSON endpoint, all under /api/v1
+│   ├── routes/web.php       # /media/{token} + the catch-all that renders app.blade.php
+│   ├── routes/console.php   # the scheduled jobs
 │   └── tests/Feature/      # feature tests only; there is no tests/Unit
 ├── docker/                  # nginx, php.ini, mysql init, observability configs
 ├── scripts/                 # deploy.sh, setup-production.sh
@@ -26,14 +27,33 @@ marketing-ai-manager/
 ## Request lifecycle
 
 ```
-browser
+browser / Meta's fetcher
   → nginx (:80 dev, :443 prod)
-      → /api/*        → php-fpm → routes/api.php  → Controller → Service → Repository → Model
+      → /api/v1/*     → php-fpm → routes/api.php  → Controller → Service → Repository → Model
+      → /api/health   → php-fpm → routes/api.php  → liveness probe, unversioned
+      → /media/{token}→ php-fpm → routes/web.php  → signed stream from Drive
       → anything else → php-fpm → routes/web.php  → app.blade.php → Vue Router takes over
 ```
 
-`/up` is Laravel's built-in health endpoint and is what `deploy.sh` smoke-tests.
-`/api/health` is the application's own liveness probe.
+**Every JSON endpoint lives under `/api/v1`.** The prefix is applied once, in
+`bootstrap/app.php`, not repeated per group.
+
+Two routes sit outside that prefix, both deliberately:
+
+- **`GET /api/health`** is unversioned. It is an infrastructure liveness probe, and a
+  probe that moves when the API version changes is a probe that silently stops
+  probing. `/up` is Laravel's own health endpoint and is what `deploy.sh`
+  smoke-tests.
+- **`GET /media/{token}`** lives in `routes/web.php`, outside `/api`, and is
+  unauthenticated. Instagram's publishing API is *pull-based*: Meta downloads the
+  piece from a publicly reachable URL and its fetcher carries no bearer token, so
+  no amount of middleware would let it through. The token in the path is the whole
+  authorisation — HMAC-SHA256 over `APP_KEY`, scoped to one asset and one account,
+  24-hour expiry (the lifetime of an Instagram media container), with a nonce so
+  every mint is a distinct URL. The response streams straight from Drive to the
+  socket; nothing is written to this machine and no token is stored, which also
+  means **nothing invalidates a token after its first use** — expiry and scope are
+  the mitigation.
 
 ## One core, many doors
 
@@ -71,8 +91,20 @@ Three consequences, all load-bearing:
 base `Controller`, the second only `User` until the auth module claims it, the
 third does not exist.
 
-A module owns one bounded slice of the domain (Campaigns, Competitors, Content,
-Youtube, …) and exposes the rest of the app exactly one thing: a Service.
+A module owns one bounded slice of the domain and **exposes the rest of the app
+exactly one thing: a Service.** Not a repository, not a model, not a client, not a
+job — a Service. If another module needs something, the answer is a method on a
+Service or the boundary is wrong.
+
+The twenty modules:
+
+```
+Accounts   Admin    Ai        Assets    Audit
+Auth       Brands   Campaigns Chat      Competitors
+Content    Core     Experiments         Integrations
+Knowledge  Onboarding         Proposals Reporting
+Settings   Strategies
+```
 
 ```
 app/Modules/{Module}/
@@ -106,20 +138,24 @@ module checklist: [`.ai/backend-guidelines.md`](../.ai/backend-guidelines.md).
 
 ### The Core module
 
-`app/Modules/Core/` is the only module that already exists. Everything else
-builds on it and never duplicates it.
+`app/Modules/Core/` is the shared base every other module builds on and none of
+them duplicates. It owns no domain of its own.
 
 | Class | Role |
 |---|---|
+| `Application/Context/AccountContext` | The active account and user for this request or job. Injected into controllers, tools and FormRequests instead of each of them re-deriving it. |
 | `Presentation/Http/Controllers/Api/ApiController` | Base controller; exposes `$this->response`. |
+| `Presentation/Http/Middleware/EnsureAccountContext` | Resolves the authenticated user's active account and populates `AccountContext`. On every route that touches tenant data. |
+| `Presentation/Http/Middleware/EnsureRole` | `EnsureRole:admin` on every `/api/v1/admin/*` route. Applied by class, not by alias. |
 | `Presentation/Http/Responses/ApiResponse` | The single JSON envelope. |
 | `Presentation/Http/Responses/ExceptionRenderer` | Maps any exception — domain, validation, auth, a router 404 — into that envelope. |
 | `Presentation/Http/Requests/RequestHelperTrait` | Typed accessors for validated input. |
-| `Presentation/Tools/ToolRegistry` | Maps tool name → Tool class, with its schema. The chat loop and the future MCP adapter both read from it. |
-| `Presentation/Tools/ToolAbstract` | Base chat tool: schema, input validation, account context. |
+| `Presentation/Tools/ToolRegistry` | Maps tool name → Tool class, with its schema. A singleton; each module registers its own tools in its provider. The chat loop reads `definitions()` from it, and the future MCP adapter will read the same. |
+| `Presentation/Tools/ToolAbstract` | Base chat tool: name, description, JSON schema, input validation against that schema, account context, `handle()`. |
 | `Domain/Exceptions/ApiException` | Base domain exception: context, log level, HTTP status. |
 | `Domain/Exceptions/ClientException` | An `ApiException` whose message is safe to show the caller. |
 | `Domain/Exceptions/ApiCallFailedException` | Raised by `ApiClientAbstract` on any failed outbound call. |
+| `Domain/Support/SecretMasker` | Replaces any array key containing `key`, `token`, `secret` or `password` with `****` plus the last four characters. Everything that reaches an action log or an exception context goes through it. |
 | `Infrastructure/Clients/GuzzleClientFactory` | Builds every outbound client with shared timeouts and headers. |
 | `Infrastructure/Clients/ApiClientAbstract` | HTTP verbs, JSON decoding, error translation. |
 
@@ -153,8 +189,35 @@ error response.
 - DTOs, Services and Repositories are `readonly` classes.
 - `declare(strict_types=1)` in every file.
 - Nothing type-hints a concrete repository; the provider resolves the contract.
-- A module may depend on another module's Service, never on its repository,
-  model or client.
+
+#### Crossing a module boundary: the line is at use, not at import
+
+A module may depend on another module's **Service**. It may never use another
+module's repository or client.
+
+Its model is the case that needs saying out loud, because the obvious phrasing
+contradicts itself: repositories return `Model`, so a Service returns a `Model`
+too, so **any caller of that Service is forced to name that type**. "Never depend
+on another module's model" and "repositories return models" cannot both hold as
+written.
+
+The rule that actually matters is narrower:
+
+> **Type-hinting another module's model is legitimate. Querying it is not.**
+
+`Experiment::where(...)`, `new Experiment`, `$experiment->save()` from outside
+`Experiments` skips the Service that holds that module's invariants — starting
+with the `account_id` filter, and continuing with every rule the Service enforces
+before a write. A type hint skips nothing; it is just the return type of a method
+you were allowed to call.
+
+So the line is drawn at **use**, not at import. `tests/Feature/Core/ModuleBoundariesTest.php`
+enforces exactly that over the whole code tree, along with four other things: no
+cross-module repository or client use, no cycles in the module dependency graph,
+nothing under `Presentation/Tools/` reaching `ProposalExecutionService`, and
+`strict_types` in every file. Two cycles appeared during the initial build
+(Strategies↔Experiments and Brands↔Strategies) and both were invisible file by
+file.
 - **Every tenant-owned table carries `account_id`,** the account travels in the
   DTO, and repositories always filter by it. Tests assert the isolation.
 
@@ -251,7 +314,7 @@ Neither file is in git. Every new variable must land in `src/.env.example` or
 |---|---|---|
 | `app` | php-fpm 8.4, code bind-mounted | same image, opcache on, timestamps frozen |
 | `nginx` | `:8080`, plain HTTP | `:80` → redirect, `:443` TLS from Let's Encrypt |
-| `db` | MySQL 8.4 on `:3307`; also holds the `marketing_ai_testing` schema | MySQL 8.4, bound to `127.0.0.1:3306` |
+| `db` | MySQL 8.4 on `:3307`; also holds `marketing_ai_testing` and the parallel `marketing_ai_testing_{a,b,c,d,main}` schemas | MySQL 8.4, bound to `127.0.0.1:3306` |
 | `redis` | `:6380` — cache, sessions, queue | internal only |
 | `node` | Vite dev server on `:5173` | not present; assets are prebuilt by `deploy.sh` |
 | `queue` | `queue:work` | `queue:work` with `--max-time=3600` |

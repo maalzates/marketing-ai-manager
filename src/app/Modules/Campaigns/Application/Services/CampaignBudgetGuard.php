@@ -85,8 +85,10 @@ readonly class CampaignBudgetGuard
             number_format($expected->value, 2),
             number_format($this->rules->minimumDailyBudgetFor($expected->value), 2),
             number_format($expected->value, 2),
-            $this->rules->eventsNeeded(),
-            $this->rules->learningWindowDays(),
+            // The formula pair, not the learning pair: these two numbers are printed as the
+            // arithmetic behind minimumDailyBudgetFor(), so they have to be the ones it used.
+            $this->rules->budgetFormulaEvents(),
+            $this->rules->budgetFormulaWindowDays(),
             number_format($daily, 2),
         );
     }

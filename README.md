@@ -1,7 +1,22 @@
 # Marketing AI Manager
 
+A marketing manager for one person. You describe your brand, write a strategy, and
+state each experiment's expected result **before** it runs. The application then
+watches the real numbers — Instagram, Facebook Ads, your competitors — and when
+something drifts it *proposes* an action: close this experiment, move that budget,
+launch this campaign.
+
+It never acts on its own. Every mutation waits for a human to accept it, and that
+rule is enforced by the architecture rather than by a prompt: there is no code path
+from the chat assistant, or from a scheduled job, to a Service that executes
+anything.
+
 Laravel 13 API + Vue 3 SPA, running on Docker, deployed to a single VPS with
 automatic deploys from `main`.
+
+**New here? Read [`SETUP.md`](./SETUP.md).** It takes an empty machine to a working
+application: the external consoles, both environment files, bring-up, first login
+and onboarding. The quick start below is only the container half of it.
 
 ## Quick start
 
@@ -25,6 +40,30 @@ to re-run; use `make start` for a plain resume.
 | Grafana (optional profile) | http://localhost:3000 — admin/admin |
 
 Ports are overridable: `HTTP_PORT=9000 make up`.
+
+The application will start without a single provider credential, and will not do
+much: signing in needs the Google OAuth client from `src/.env`, and everything else
+needs the keys each user enters through onboarding. `SETUP.md` walks both.
+
+## Two kinds of credentials
+
+Confusing these is the most likely way to get stuck, so it is the first thing in
+`SETUP.md` and the first thing here.
+
+| | **Platform credentials** | **User credentials** |
+|---|---|---|
+| Identify | the application | a person using it |
+| Set by | whoever runs the deployment, once | each user, in the app |
+| Live in | `src/.env` | the `integrations` table, encrypted per account |
+| Examples | Google OAuth client id/secret, Meta app id/secret, the redirect URIs, `META_GRAPH_VERSION`, `ADMIN_EMAILS`, `APP_KEY`, database and Redis | Apify token, Anthropic / OpenAI / Gemini API key, the Meta and Google OAuth connections |
+
+**A user's key never goes near `.env`.** There is no fallback key, no shared
+account key, no "the admin's key when the user has none". Keys are resolved per
+account at the moment they are used and discarded — never cached in a singleton,
+a static property or shared container state, because a singleton would serve every
+account with one user's key. This is also why the project does not use
+`laravel/ai`: it can only take a key from `config`, where it shows up in
+`php artisan about` and in any error-page config dump.
 
 ## Commands
 
@@ -53,7 +92,29 @@ scripts/      deploy.sh, setup-production.sh
 spec/         one folder per unit of work (see CLAUDE.md)
 docs/         deployment guide + the two visual canvases
 .ai/          binding standards for AI agents (architecture, backend, tests)
+SETUP.md      empty machine → working application
 ```
+
+## The modules
+
+Every backend class lives in one of these. A module owns one slice of the domain
+and exposes the rest of the application exactly one thing: a Service.
+
+| Module | Owns |
+|---|---|
+| `Core` | The shared base: JSON envelope, exception hierarchy, Guzzle factory, account context, the two middlewares, the chat tool registry |
+| `Auth` · `Accounts` · `Admin` | Google sign-in without passwords, accounts and roles, the admin surface (users, roles, application API keys, global settings) |
+| `Onboarding` · `Settings` · `Knowledge` | The four-step wizard, the cascading settings registry (strategy → account → global → declared default), the editable domain knowledge and glossary |
+| `Integrations` | Every user credential: encrypted storage, live verification, the Google and Meta OAuth flows, silent refresh, the daily health check |
+| `Ai` | One client per LLM provider, model routing per task, prompt assembly, the token budget, the analysis cache |
+| `Brands` · `Strategies` · `Experiments` | The brand profile, the strategy and its budget, and the experiment — including the rule that nothing is created without a written expected result and an end date |
+| `Proposals` | The approval invariant. Anything may propose; only the human-accept endpoint executes |
+| `Chat` | The assistant and its tool loop. Read tools answer, mutation tools propose |
+| `Competitors` | Apify scraping, pattern analysis, comment mining, sentiment, insights |
+| `Content` · `Assets` | Scripts, the calendar, organic publishing with retries and a manual fallback; the Drive-backed asset library and the signed media stream |
+| `Campaigns` | Meta Ads: campaign, ad set, ad, creative upload, sandbox mode, metric sync |
+| `Reporting` | The daily guardián, experiment verdicts, reports |
+| `Audit` | Action log, LLM spend ledger, Apify spend ledger, secret masking |
 
 ## Stack
 
@@ -73,8 +134,8 @@ backups and troubleshooting are all in
 
 Two self-contained HTML canvases, kept current as the last step of every change:
 
-- [`docs/project-map.html`](./docs/project-map.html) — repo layout, stack,
-  container topology for dev and production, ports, environment files, the
+- [`docs/project-map.html`](./docs/project-map.html) — repo layout, the modules,
+  stack, container topology for dev and production, ports, environment files, the
   deploy path, the make targets.
 - [`docs/system-flows.html`](./docs/system-flows.html) — the doors into the
   application, the layers, a request end to end, errors and logging, outbound
@@ -86,12 +147,22 @@ Open them straight from the filesystem; no build step, no dependencies.
 ## Backend architecture
 
 Modular monolith with DDD: every backend class lives in `src/app/Modules/{Module}/`,
-split into `Application/`, `Domain/`, `Infrastructure/` and `Presentation/`.
-`Modules/Core/` holds the shared base — the JSON envelope, the domain exception
-hierarchy, and the Guzzle factory every external API client is built from.
+split into `Application/`, `Domain/`, `Infrastructure/` and `Presentation/`. Every
+JSON endpoint lives under `/api/v1`; `/api/health` stays unversioned because a
+liveness probe must not move with the API, and `/media/{token}` sits outside `/api`
+entirely because Instagram's publishing API pulls the bytes and its fetcher carries
+no token.
 
 Patterns and templates: the `marketing-backend-ddd` skill. Rationale and the
 new-module checklist: [`.ai/backend-guidelines.md`](./.ai/backend-guidelines.md).
+
+## Testing
+
+Feature tests only — every test enters through a real route, job or command and
+runs against MySQL, not sqlite, so repository tests exercise the JSON columns,
+enums and collations that ship. Nothing this repo owns is ever mocked; only what
+leaves the machine is faked. [`.ai/test-guidelines.md`](./.ai/test-guidelines.md)
+has the rules, including the separate schemas concurrent suites need.
 
 ## How we work
 

@@ -9,10 +9,10 @@ use App\Modules\Core\Domain\Exceptions\ClientException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
@@ -26,10 +26,26 @@ readonly class ExceptionRenderer
 
     public function __construct(private ApiResponse $response = new ApiResponse) {}
 
-    public function render(Throwable $exception, Request $request): ?JsonResponse
+    /**
+     * `/media/{token}` is the only route outside `/api`, it is public, and its caller is
+     * Meta's media fetcher — not a JSON client and not a browser. Returning null here handed
+     * the exception to Laravel's default handler, which rendered a domain 404 as a 500 and,
+     * with APP_DEBUG on, served a stack trace from an unauthenticated endpoint.
+     *
+     * A bare status with no body is the right answer: the fetcher reads the code, and an
+     * expired, forged or unknown token stays indistinguishable to anyone probing the route.
+     */
+    private function renderOutsideTheApi(Throwable $exception): ?SymfonyResponse
+    {
+        return $exception instanceof ApiException
+            ? new SymfonyResponse('', $exception->getHttpStatusCode())
+            : null;
+    }
+
+    public function render(Throwable $exception, Request $request): ?SymfonyResponse
     {
         if (! $request->is('api/*') && ! $request->expectsJson()) {
-            return null;
+            return $this->renderOutsideTheApi($exception);
         }
 
         return match (true) {

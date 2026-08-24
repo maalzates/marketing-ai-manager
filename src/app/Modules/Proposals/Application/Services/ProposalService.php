@@ -15,6 +15,7 @@ use App\Modules\Proposals\Domain\Exceptions\ProposalAlreadyDecidedException;
 use App\Modules\Proposals\Domain\Exceptions\ProposalExpiredException;
 use App\Modules\Proposals\Domain\Exceptions\ProposalNotFoundException;
 use App\Modules\Proposals\Infrastructure\Persistence\Proposal;
+use App\Modules\Strategies\Application\Services\StrategyService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
@@ -30,11 +31,16 @@ readonly class ProposalService
     public function __construct(
         private ProposalRepositoryInterface $repository,
         private ExperimentService $experiments,
+        private StrategyService $strategies,
         private ActionLogService $actionLog,
     ) {}
 
     public function propose(ProposeDTO $dto): Proposal
     {
+        if ($dto->strategyId !== null) {
+            $this->strategies->find($dto->strategyId, $dto->accountId);
+        }
+
         if ($dto->experimentId !== null) {
             $this->experiments->find($dto->experimentId, $dto->accountId);
         }

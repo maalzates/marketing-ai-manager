@@ -18,6 +18,7 @@
     <div class="meta">
       <span><b>Repo</b> marketing-ai-manager</span>
       <span><b>Stack</b> Laravel 13 · Vue 3 · MySQL 8.4</span>
+      <span><b>Backend</b> 20 módulos · 106 rutas bajo <code>/api/v1</code></span>
       <span><b>Despliegue</b> VPS único, Docker Compose</span>
     </div>
   </div>
@@ -25,6 +26,7 @@
 
 <nav><div class="wrap"><ul>
   <li><a href="#repo">Repositorio</a></li>
+  <li><a href="#modulos">Los 20 módulos</a></li>
   <li><a href="#stack">Stack</a></li>
   <li><a href="#dev">Contenedores · dev</a></li>
   <li><a href="#prod">Contenedores · producción</a></li>
@@ -45,12 +47,13 @@
 <div><b>marketing-ai-manager/</b></div>
 <div>├── <b>src/</b>                        <em>la aplicación Laravel</em></div>
 <div>│   ├── app/<b>Modules/</b>            <em>TODO el backend; un módulo por dominio</em></div>
-<div>│   │   └── Core/                <em>base compartida: envoltorio, excepciones, clientes</em></div>
+<div>│   │   └── Core/                <em>base compartida: envoltorio, excepciones, clientes, contexto</em></div>
 <div>│   ├── bootstrap/app.php        <em>rutas, middleware, render de excepciones</em></div>
 <div>│   ├── database/migrations/</div>
 <div>│   ├── resources/js/            <em>la SPA de Vue</em></div>
-<div>│   ├── routes/api.php           <em>todo endpoint JSON</em></div>
-<div>│   ├── routes/web.php           <em>catch-all que sirve app.blade.php</em></div>
+<div>│   ├── routes/api.php           <em>todo endpoint JSON, bajo /api/v1</em></div>
+<div>│   ├── routes/web.php           <em>/media/{token} + catch-all que sirve app.blade.php</em></div>
+<div>│   ├── routes/console.php       <em>los 8 trabajos programados</em></div>
 <div>│   └── tests/Feature/           <em>solo feature tests; no existe tests/Unit</em></div>
 <div>│</div>
 <div>├── <b>docker/</b>                     <em>configuración de los contenedores</em></div>
@@ -68,22 +71,106 @@
 <div>├── docker-compose.prod.yml      <em>producción</em></div>
 <div>├── Dockerfile                   <em>php:8.4-fpm, la misma imagen en ambos</em></div>
 <div>├── Makefile                     <em>diez objetivos, ni uno más</em></div>
+<div>├── SETUP.md                     <em>de máquina vacía a aplicación funcionando</em></div>
 <div>└── CLAUDE.md                    <em>cómo se trabaja aquí</em></div>
   </div>
 
   <div class="card amber">
     <h4>Una regla estructural</h4>
-    <p>Todo el backend vive en <code>src/app/Modules/</code>. <code>app/Http/</code> solo
-       guarda el <code>Controller</code> base de Laravel, <code>app/Models/</code> solo
-       <code>User</code> hasta que exista el módulo de autenticación, y
+    <p>Todo el backend vive en <code>src/app/Modules/</code>: 703 ficheros PHP repartidos en
+       20 módulos. <code>app/Http/</code> solo guarda el <code>Controller</code> base de
+       Laravel, <code>app/Models/</code> solo <code>User</code>, y
        <code>app/Services/</code> no se crea nunca.</p>
+  </div>
+</div>
+</section>
+
+<section id="modulos">
+<div class="wrap">
+  <h2><span class="n">02</span> Los veinte módulos</h2>
+  <p>Cada clase del backend pertenece a uno. Un módulo posee una porción del dominio y
+     ofrece al resto de la aplicación exactamente una cosa: un <b>Service</b>. Ni un
+     repositorio, ni un modelo, ni un cliente.</p>
+
+  <figure>
+  <svg viewBox="0 0 1080 430" role="img" aria-label="Los veinte módulos agrupados por función">
+    <rect class="box box-surface" x="0" y="0" width="1080" height="66" rx="10"/>
+    <text class="t-cap" x="18" y="22">Base compartida</text>
+    <rect class="box box-purple" x="18" y="28" width="150" height="26" rx="7"/>
+    <text class="t-mono" x="93" y="46" text-anchor="middle">Core</text>
+    <text class="t-label" x="188" y="46">envoltorio JSON · excepciones · Guzzle · AccountContext · ToolRegistry · SecretMasker</text>
+
+    <rect class="group" x="0" y="84" width="527" height="150" rx="10"/>
+    <text class="t-cap" x="18" y="106">Acceso y configuración</text>
+    <rect class="box box-blue" x="18" y="116" width="112" height="26" rx="7"/><text class="t-mono" x="74" y="134" text-anchor="middle">Auth</text>
+    <rect class="box box-blue" x="140" y="116" width="112" height="26" rx="7"/><text class="t-mono" x="196" y="134" text-anchor="middle">Accounts</text>
+    <rect class="box box-blue" x="262" y="116" width="112" height="26" rx="7"/><text class="t-mono" x="318" y="134" text-anchor="middle">Admin</text>
+    <rect class="box box-blue" x="384" y="116" width="125" height="26" rx="7"/><text class="t-mono" x="446" y="134" text-anchor="middle">Onboarding</text>
+    <rect class="box box-blue" x="18" y="152" width="112" height="26" rx="7"/><text class="t-mono" x="74" y="170" text-anchor="middle">Settings</text>
+    <rect class="box box-blue" x="140" y="152" width="112" height="26" rx="7"/><text class="t-mono" x="196" y="170" text-anchor="middle">Knowledge</text>
+    <rect class="box box-blue" x="262" y="152" width="247" height="26" rx="7"/><text class="t-mono" x="386" y="170" text-anchor="middle">Integrations</text>
+    <text class="t-label" x="18" y="206">Entrar sin contraseña, quién es quién, qué puede</text>
+    <text class="t-label" x="18" y="222">tocar, y dónde vive cada credencial de usuario.</text>
+
+    <rect class="group" x="553" y="84" width="527" height="150" rx="10"/>
+    <text class="t-cap" x="571" y="106">El dominio del marketing</text>
+    <rect class="box box-green" x="571" y="116" width="112" height="26" rx="7"/><text class="t-mono" x="627" y="134" text-anchor="middle">Brands</text>
+    <rect class="box box-green" x="693" y="116" width="112" height="26" rx="7"/><text class="t-mono" x="749" y="134" text-anchor="middle">Strategies</text>
+    <rect class="box box-green" x="815" y="116" width="125" height="26" rx="7"/><text class="t-mono" x="877" y="134" text-anchor="middle">Experiments</text>
+    <rect class="box box-red" x="950" y="116" width="112" height="26" rx="7"/><text class="t-mono" x="1006" y="134" text-anchor="middle">Proposals</text>
+    <rect class="box box-green" x="571" y="152" width="112" height="26" rx="7"/><text class="t-mono" x="627" y="170" text-anchor="middle">Campaigns</text>
+    <rect class="box box-green" x="693" y="152" width="112" height="26" rx="7"/><text class="t-mono" x="749" y="170" text-anchor="middle">Content</text>
+    <rect class="box box-green" x="815" y="152" width="112" height="26" rx="7"/><text class="t-mono" x="871" y="170" text-anchor="middle">Assets</text>
+    <rect class="box box-green" x="937" y="152" width="125" height="26" rx="7"/><text class="t-mono" x="999" y="170" text-anchor="middle">Competitors</text>
+    <text class="t-label" x="571" y="206">Marca, estrategia, experimento, campaña, pieza.</text>
+    <text class="t-label" x="571" y="222"><tspan font-weight="600">Proposals</tspan> es el único que ejecuta una mutación.</text>
+
+    <rect class="group" x="0" y="254" width="527" height="120" rx="10"/>
+    <text class="t-cap" x="18" y="276">Inteligencia</text>
+    <rect class="box box-amber" x="18" y="286" width="112" height="26" rx="7"/><text class="t-mono" x="74" y="304" text-anchor="middle">Ai</text>
+    <rect class="box box-amber" x="140" y="286" width="112" height="26" rx="7"/><text class="t-mono" x="196" y="304" text-anchor="middle">Chat</text>
+    <rect class="box box-amber" x="262" y="286" width="125" height="26" rx="7"/><text class="t-mono" x="324" y="304" text-anchor="middle">Reporting</text>
+    <text class="t-label" x="18" y="340">Un cliente por proveedor, el bucle de herramientas</text>
+    <text class="t-label" x="18" y="356">del asistente, y el guardián diario.</text>
+
+    <rect class="group" x="553" y="254" width="527" height="120" rx="10"/>
+    <text class="t-cap" x="571" y="276">Rastro</text>
+    <rect class="box" x="571" y="286" width="112" height="26" rx="7" style="fill:var(--cyan-bg);stroke:var(--cyan-line)"/><text class="t-mono" x="627" y="304" text-anchor="middle">Audit</text>
+    <text class="t-label" x="571" y="340">Registro de acciones, gasto de tokens y gasto de</text>
+    <text class="t-label" x="571" y="356">Apify. Todo pasa antes por el enmascarador.</text>
+
+    <rect class="box box-red" x="0" y="392" width="1080" height="34" rx="8"/>
+    <text class="t-label" x="540" y="414" text-anchor="middle" fill="#c02a37">Un módulo depende del <tspan font-weight="600">Service</tspan> de otro, nunca de su repositorio, su modelo ni su cliente · <tspan class="t-mono" fill="#c02a37">ModuleBoundariesTest</tspan> lo verifica sobre el árbol</text>
+  </svg>
+  <figcaption>Los colores agrupan por función, no por capa: dentro de cada módulo la
+    estructura es siempre la misma cuatro carpetas.</figcaption>
+  </figure>
+
+  <h3>La estructura interna, idéntica en los veinte</h3>
+
+  <div class="tree">
+<div><b>app/Modules/{Módulo}/</b></div>
+<div>├── Application/     <em>DTO/ · Services/ · Jobs/ — la lógica de negocio</em></div>
+<div>├── Domain/          <em>Contracts/ · Enums/ · Exceptions/ — el vocabulario</em></div>
+<div>├── Infrastructure/  <em>Persistence/ · Repositories/ · Clients/ — lo que habla con fuera</em></div>
+<div>├── Presentation/    <em>Http/ · Tools/ — las puertas</em></div>
+<div>└── {Módulo}ServiceProvider.php   <em>ata los contratos y registra las tools</em></div>
+  </div>
+
+  <div class="card amber">
+    <h4>El contrato vive en el módulo que pregunta</h4>
+    <p>Cuando un módulo necesita una respuesta que otro tiene, <b>declara él la interfaz</b>
+       y el otro la implementa y registra el binding en su propio provider. Declararla junto
+       a la implementación parece igual de razonable y produce un ciclo cada vez: durante la
+       construcción inicial aparecieron dos, <code>Strategies↔Experiments</code> y
+       <code>Brands↔Strategies</code>, invisibles fichero a fichero.</p>
   </div>
 </div>
 </section>
 
 <section id="stack">
 <div class="wrap">
-  <h2><span class="n">02</span> El stack</h2>
+  <h2><span class="n">03</span> El stack</h2>
 
   <figure>
   <svg viewBox="0 0 1080 300" role="img" aria-label="Capas del stack, de navegador a datos">
@@ -147,7 +234,7 @@
 
 <section id="dev">
 <div class="wrap">
-  <h2><span class="n">03</span> Contenedores · desarrollo</h2>
+  <h2><span class="n">04</span> Contenedores · desarrollo</h2>
   <p><code>docker-compose.yml</code>. Todo se levanta con <code>make up</code>.</p>
 
   <figure>
@@ -242,7 +329,7 @@
 
 <section id="prod">
 <div class="wrap">
-  <h2><span class="n">04</span> Contenedores · producción</h2>
+  <h2><span class="n">05</span> Contenedores · producción</h2>
   <p><code>docker-compose.prod.yml</code>, en <code>/var/www/marketing-ai-manager</code>.
      Misma imagen que en desarrollo; cambian el <code>php.ini</code>, el entorno y qué se
      expone.</p>
@@ -339,7 +426,7 @@
 
 <section id="env">
 <div class="wrap">
-  <h2><span class="n">05</span> Dos ficheros de entorno</h2>
+  <h2><span class="n">06</span> Dos ficheros de entorno</h2>
   <p>Los lee software distinto. Confundirlos es el error más común al montar el servidor.</p>
 
   <figure>
@@ -352,8 +439,8 @@
 
     <rect class="box box-purple" x="620" y="10" width="420" height="86" rx="10"/>
     <text class="t-title" x="640" y="38">src/.env</text>
-    <text class="t-label" x="640" y="58">APP_KEY · APP_URL · DB_* · REDIS_HOST</text>
-    <text class="t-label" x="640" y="76">credenciales de plataforma (OAuth, LLM)</text>
+    <text class="t-label" x="640" y="58">APP_KEY · APP_URL · DB_* · REDIS_HOST · ADMIN_EMAILS</text>
+    <text class="t-label" x="640" y="76">GOOGLE_CLIENT_* · META_APP_* · META_GRAPH_VERSION</text>
     <text class="t-sub" x="1020" y="38" text-anchor="end">lo lee Laravel</text>
 
     <path class="edge" d="M250 96 L250 150" marker-end="url(#c2)"/>
@@ -390,15 +477,29 @@
        dentro de MySQL y actualizar <code>src/.env</code>.</p>
   </div>
 
-  <p>Ninguno de los dos está en git. Las credenciales por cuenta (BYOK: Apify, tokens de Meta
-     y de Google del usuario) <b>no van en ningún <code>.env</code></b>: viven cifradas en las
-     integraciones de cada cuenta y se resuelven en tiempo de ejecución.</p>
+  <p>Ninguno de los dos está en git. Lo que hay en <code>src/.env</code> son
+     <b>credenciales de plataforma</b>: identifican a la aplicación y las pone una sola vez
+     quien despliega.</p>
+
+  <div class="card purple">
+    <h4>Las credenciales de usuario no van en ningún <code>.env</code></h4>
+    <p>La key de Apify, la de Anthropic, OpenAI o Gemini, y las conexiones OAuth de Meta y
+       Google identifican a <b>una persona</b>, no a la aplicación. Se introducen por el
+       onboarding, viven cifradas en la tabla <code>integrations</code> con
+       <code>APP_KEY</code>, y se resuelven por cuenta en cada petición o trabajo. No hay key
+       de reserva, ni key compartida, ni «la del admin cuando el usuario no tiene».</p>
+    <p>Un cliente con la key de una cuenta <b>nunca</b> se cachea en un singleton: serviría a
+       todas las cuentas con la key de una.</p>
+  </div>
+
+  <p>El recorrido completo —qué consola externa da cada valor y en qué orden— está en
+     <code>SETUP.md</code>.</p>
 </div>
 </section>
 
 <section id="deploy">
 <div class="wrap">
-  <h2><span class="n">06</span> Del push al servidor</h2>
+  <h2><span class="n">07</span> Del push al servidor</h2>
 
   <div class="pipeline">
     <div class="step"><h5>git push</h5><p>a <code>main</code></p></div>
@@ -441,7 +542,7 @@
 
 <section id="comandos">
 <div class="wrap">
-  <h2><span class="n">07</span> Los diez comandos</h2>
+  <h2><span class="n">08</span> Los diez comandos</h2>
   <p>Deliberadamente diez. Lo que no cubren se alcanza con <code>make exec</code> o con
      <code>make artisan CMD="..."</code>.</p>
 
@@ -463,7 +564,7 @@
 
 <section id="docs">
 <div class="wrap">
-  <h2><span class="n">08</span> Dónde está cada documento</h2>
+  <h2><span class="n">09</span> Dónde está cada documento</h2>
   <p>Dos sitios, sin espejos. Cada hecho vive en un único fichero.</p>
 
   <div class="split">
@@ -483,6 +584,8 @@
         <li><code>system-flows.html</code> — los flujos</li>
         <li><code>deployment.md</code> — montar y desplegar el servidor</li>
       </ul>
+      <p style="margin-top:10px">Y en la raíz, <code>SETUP.md</code>: de máquina vacía a
+         aplicación funcionando. Es lo primero que lee alguien nuevo.</p>
     </div>
   </div>
 

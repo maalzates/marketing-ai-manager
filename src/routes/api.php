@@ -187,7 +187,7 @@ Route::prefix('v1')->group(function (): void {
     });
 
     // --- Chat ---------------------------------------------------------------
-    Route::middleware(['auth:sanctum', 'account'])->group(function (): void {
+    Route::middleware(['auth:sanctum', 'account', 'throttle:chat'])->group(function (): void {
         Route::post('/chat', ChatController::class);
         Route::get('/chat/conversations', [ChatConversationController::class, 'index']);
         Route::post('/chat/conversations', [ChatConversationController::class, 'store']);
@@ -208,7 +208,7 @@ Route::prefix('v1')->group(function (): void {
     });
 
     // --- Admin --------------------------------------------------------------
-    Route::middleware(['auth:sanctum', 'account', 'role:admin'])->prefix('admin')->group(function (): void {
+    Route::middleware(['auth:sanctum', 'account', 'role:admin', 'throttle:admin'])->prefix('admin')->group(function (): void {
         Route::get('/users', [AdminUserController::class, 'index']);
         Route::post('/users', [AdminUserController::class, 'store']);
         Route::get('/users/{id}', [AdminUserController::class, 'show'])->whereNumber('id');
@@ -230,7 +230,7 @@ Route::prefix('v1')->group(function (): void {
     Route::middleware(['auth:sanctum', 'role:admin'])->group(function (): void {
         Route::get('/admin/knowledge', [AdminKnowledgeController::class, 'index']);
         Route::post('/admin/knowledge', [AdminKnowledgeController::class, 'store']);
-        Route::put('/admin/knowledge/{id}', [AdminKnowledgeController::class, 'update']);
-        Route::delete('/admin/knowledge/{id}', [AdminKnowledgeController::class, 'destroy']);
+        Route::put('/admin/knowledge/{id}', [AdminKnowledgeController::class, 'update'])->whereNumber('id');
+        Route::delete('/admin/knowledge/{id}', [AdminKnowledgeController::class, 'destroy'])->whereNumber('id');
     });
 });

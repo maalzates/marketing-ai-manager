@@ -115,6 +115,56 @@ When two modules need the same thing, the honest options are: move it to `Core`
 domain). Reaching across into `App\Modules\Other\Infrastructure\...` is how a
 modular monolith becomes a regular monolith with extra folders.
 
+Type-hinting another module's model is fine; querying it is not. The reasoning is
+in [`.ai/architecture.md`](./architecture.md), and
+`tests/Feature/Core/ModuleBoundariesTest.php` enforces it.
+
+### The contract lives in the module that asks the question
+
+Two dependency cycles appeared during the initial build (Strategies↔Experiments
+and Brands↔Strategies), both invisible file by file and both created the same way:
+a module needed an answer, so it reached for the Service that had it, and that
+Service already reached back.
+
+The rule that resolves it:
+
+> **The interface is declared by the module that asks. The module that answers
+> implements it and registers the binding in its own provider.**
+
+Strategies needs to know how much budget its experiments have committed, so
+`Strategies` declares the contract; `Experiments` implements it and binds it in
+`ExperimentsServiceProvider`. The arrow now points one way, and the module with
+the answer is the one that can be swapped.
+
+Applied naively this is just dependency inversion. What makes it worth writing
+down is that the wrong choice — declaring the interface next to the
+implementation, in the module that answers — looks equally reasonable and
+produces a cycle every time.
+
+**The companion hazard: a `bindIf` default must fail closed.**
+
+Declaring the contract in the asking module means that module can now boot without
+the answering one, which invites a `bindIf` null-object default so it does. That
+default is a security decision, not a convenience:
+
+```php
+// Wrong. A workload provider that reports zero committed spend makes every
+// budget check pass, silently, for as long as the real binding is missing.
+$this->app->bindIf(WorkloadInterface::class, fn () => new NoWorkload);
+```
+
+A default that silently allows is worse than the missing binding it replaces: the
+missing binding throws a container error someone fixes in a minute, and the
+permissive default ships. If a null object cannot answer safely, it must refuse —
+throw, or return the value that denies.
+
+`BrandProfileAssumedInUse` is the shape to copy: absent the real answer it assumes
+the profile *is* in use, so the delete is refused rather than allowed.
+`EmptyStrategyWorkload` is the shape to check twice — it answers
+`hasRecordedWork() === false`, which permits deleting a strategy, so it is only
+safe for as long as `ExperimentsServiceProvider` really does win the binding. A new
+`bindIf` default is not done until a test proves it denies.
+
 ## Queues and scheduled work
 
 Jobs live in the module that owns the work

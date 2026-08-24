@@ -14,7 +14,7 @@ use App\Modules\Content\Domain\Exceptions\MediaSpecRejectedException;
 /**
  * Turns a linked asset into the public URLs a channel will pull from. Publishing is pull-based
  * everywhere this project posts: the bytes never leave Drive through us, only a signed URL that
- * streams them for as long as a container can live.
+ * streams them until shortly after the channel has fetched them.
  */
 readonly class PublishableMediaResolver
 {

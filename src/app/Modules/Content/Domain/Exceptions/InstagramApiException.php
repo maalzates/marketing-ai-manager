@@ -12,12 +12,16 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Meta answers 400 for most failures and puts the real cause in `error.code`, so the HTTP
  * status says nothing about whether retrying is worth it. `is_transient` and the retryable
- * code list decide that here, once, for every caller.
+ * code list decide that here, once, for every caller. Of Meta's two texts only
+ * `error_user_msg` is written for the advertiser; `message` is developer-facing, changes
+ * without notice and never becomes a message we publish as our own.
  */
 class InstagramApiException extends ClientException
 {
     /** Codes Meta documents as worth retrying: throttling and temporary unavailability. */
     private const array RETRYABLE_CODES = [1, 2, 4, 17, 32, 341, 613];
+
+    private const string FALLBACK_MESSAGE = 'Instagram rejected the request.';
 
     private bool $transient = false;
 
@@ -26,7 +30,7 @@ class InstagramApiException extends ClientException
         $error = $exception->getContext()['response_body']['error'] ?? [];
 
         $failure = new self(
-            $error['error_user_msg'] ?? $error['message'] ?? 'Instagram rejected the request.',
+            is_string($error['error_user_msg'] ?? null) ? $error['error_user_msg'] : self::FALLBACK_MESSAGE,
             Response::HTTP_BAD_GATEWAY,
             $exception,
         );

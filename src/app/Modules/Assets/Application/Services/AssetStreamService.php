@@ -10,33 +10,43 @@ use App\Modules\Assets\Domain\Exceptions\AssetWithoutDriveFileException;
 use App\Modules\Assets\Domain\Exceptions\InvalidMediaTokenException;
 use App\Modules\Assets\Infrastructure\Persistence\Asset;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Contracts\Routing\UrlGenerator;
 
 /**
  * The seam between "Drive stores, the DB governs" and Instagram's pull-based publishing API,
  * which downloads a public URL and refuses a binary. A minted token is a capability: it names
- * one asset, expires with the media container that consumes it, and opens a stream straight
- * from Drive. Nothing is ever written to disk and no token is stored.
+ * one asset, opens a stream straight from Drive, and dies once the fetch window it opens on
+ * first use closes. The file is never written to disk; only the token's nonce is kept, in the
+ * cache, and the token itself is never stored.
  */
 readonly class AssetStreamService
 {
     public const string ROUTE_NAME = 'assets.media';
 
+    private const string CACHE_PREFIX = 'assets:media-token:';
+
     private const int TTL_HOURS = 24;
+
+    private const int FETCH_WINDOW_MINUTES = 10;
 
     private const string SIGNATURE_ALGORITHM = 'sha256';
 
     public function __construct(
         private AssetRepositoryInterface $repository,
         private DriveClientFactoryInterface $clients,
+        private Cache $cache,
         private Encrypter $encrypter,
         private UrlGenerator $url,
     ) {}
 
     /**
-     * 24 hours matches the lifetime of an Instagram media container, and the nonce makes every
-     * mint a distinct token, so one container's URL never serves another's.
+     * The URL lives 24 hours unfetched — the lifetime of an Instagram media container — but only
+     * ten minutes past its first fetch. Meta's fetcher issues several requests per container
+     * (a HEAD, then ranged GETs on video), so a token good for exactly one request would break
+     * publishing; a window that starts on the first byte still shuts a leaked URL long before
+     * the container it was minted for expires.
      */
     public function signedUrlFor(Asset $asset): string
     {
@@ -61,11 +71,16 @@ readonly class AssetStreamService
 
     private function mint(Asset $asset): string
     {
-        return $this->sign(self::encode(json_encode([
+        $expiresAt = CarbonImmutable::now()->addHours(self::TTL_HOURS);
+        $nonce = bin2hex(random_bytes(8));
+
+        $this->cache->put(self::CACHE_PREFIX.$nonce, false, $expiresAt);
+
+        return $this->sign(self::encode((string) json_encode([
             'asset' => $asset->id,
             'account' => $asset->account_id,
-            'expires' => CarbonImmutable::now()->addHours(self::TTL_HOURS)->getTimestamp(),
-            'nonce' => bin2hex(random_bytes(8)),
+            'expires' => $expiresAt->getTimestamp(),
+            'nonce' => $nonce,
         ])));
     }
 
@@ -75,7 +90,7 @@ readonly class AssetStreamService
     }
 
     /**
-     * @return array{asset: int, account: int}|null
+     * @return array{asset: int, account: int, nonce: string}|null
      */
     private function verifiedClaims(string $token): ?array
     {
@@ -85,12 +100,32 @@ readonly class AssetStreamService
             return null;
         }
 
-        return self::unexpired((array) json_decode(self::decode($payload), true));
+        return $this->withinFetchWindow(self::unexpired((array) json_decode(self::decode($payload), true)));
+    }
+
+    /**
+     * The cached nonce carries whether the window is already open: absent means never minted,
+     * spent or timed out; `false` means this is the first fetch and starts the clock.
+     */
+    private function withinFetchWindow(?array $claims): ?array
+    {
+        if ($claims === null) {
+            return null;
+        }
+
+        $key = self::CACHE_PREFIX.($claims['nonce'] ?? '');
+        $opened = $this->cache->get($key);
+
+        if ($opened === false) {
+            $this->cache->put($key, true, CarbonImmutable::now()->addMinutes(self::FETCH_WINDOW_MINUTES));
+        }
+
+        return $opened === null ? null : $claims;
     }
 
     private static function unexpired(array $claims): ?array
     {
-        return isset($claims['asset'], $claims['account'], $claims['expires'])
+        return isset($claims['asset'], $claims['account'], $claims['expires'], $claims['nonce'])
             && $claims['expires'] > CarbonImmutable::now()->getTimestamp()
                 ? $claims
                 : null;
