@@ -63,6 +63,11 @@ export const useAuthStore = defineStore('auth', () => {
     async function logout() {
         await run(logoutRequest, 'Sesión cerrada.');
         clear();
+
+        // A full navigation, not a route change: it drops every other store's cached data
+        // with it, so nothing of this session survives for whoever signs in next. Same
+        // thing bootstrap.js does when a token dies mid-session.
+        window.location.assign('/login');
     }
 
     return {
