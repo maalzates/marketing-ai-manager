@@ -55,6 +55,17 @@ class OnboardingWizardTest extends TestCase
             ->assertJsonPath('result.steps.0.status', 'pending');
     }
 
+    /** The wizard cannot render the LLM step without knowing its three providers and how each authenticates. */
+    public function test_the_state_lists_every_provider_a_step_accepts_and_how_it_authenticates(): void
+    {
+        $this->getJson('/api/v1/onboarding')
+            ->assertOk()
+            ->assertJsonPath('result.steps.0.step', 'llm')
+            ->assertJsonPath('result.steps.0.providers.0', ['value' => 'anthropic', 'label' => 'Anthropic', 'kind' => 'api_key'])
+            ->assertJsonCount(3, 'result.steps.0.providers')
+            ->assertJsonPath('result.steps.3.providers.0.kind', 'oauth');
+    }
+
     public function test_a_step_completes_when_the_provider_answers(): void
     {
         Integration::factory()->anthropic()->for($this->account)->disconnected()->create();

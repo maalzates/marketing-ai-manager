@@ -57,6 +57,11 @@ readonly class OnboardingService
                 'status' => $progress->statusOf($step)->value,
                 'blocked' => $progress->isBlocked($step),
                 'provider' => $progress->providerOf($step)?->value,
+                'providers' => collect($step->providers())->map(fn (IntegrationProvider $provider): array => [
+                    'value' => $provider->value,
+                    'label' => $provider->label(),
+                    'kind' => $provider->kind()->value,
+                ])->all(),
                 'changed_at' => $progress->changedAtOf($step),
                 'guides' => $guides->only($step->guideKeys())->values(),
                 'integrations' => $integrations->only($step->providerValues())->values(),

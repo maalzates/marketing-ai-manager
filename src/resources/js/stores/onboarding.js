@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import { fetchOnboarding, skipStep as skipStepRequest, updateOnboarding } from '@/repositories/onboardingRepository';
+import { completeStep, fetchOnboarding, skipStep as skipStepRequest } from '@/repositories/onboardingRepository';
 import { useAsyncState } from '@/stores/useAsyncState';
 
 const RESOLVED = ['completed', 'skipped'];
@@ -15,12 +15,12 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     const pendingSteps = computed(() => steps.value.filter((step) => !RESOLVED.includes(step.status)));
     const isFinished = computed(() => RESOLVED.includes(status.value) || (loaded.value && pendingSteps.value.length === 0));
     const mustResume = computed(() => loaded.value && !isFinished.value);
-    const resumeStep = computed(() => pendingSteps.value[0]?.key ?? steps.value[0]?.key ?? null);
+    const resumeStep = computed(() => pendingSteps.value[0]?.step ?? steps.value[0]?.step ?? null);
     const completedCount = computed(() => steps.value.filter((step) => RESOLVED.includes(step.status)).length);
 
     function apply(payload) {
         steps.value = payload?.steps ?? [];
-        status.value = payload?.status ?? 'pending';
+        status.value = payload?.completed_at ? 'completed' : 'pending';
         loaded.value = true;
     }
 
@@ -30,7 +30,7 @@ export const useOnboardingStore = defineStore('onboarding', () => {
 
     async function save(step, payload) {
         const result = await run(
-            () => updateOnboarding({ step, ...payload }),
+            () => completeStep(step, payload),
             'Paso guardado y verificado.',
         );
 
