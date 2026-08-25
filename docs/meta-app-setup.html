@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configurar la app de Meta · Marketing AI Manager</title>
+<link rel="stylesheet" href="_canvas.css">
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="kicker">Guía de operador · Meta for Developers</span>
+    <h1>Configurar la app de Meta</h1>
+    <p>La mitad Meta de las credenciales de plataforma: <code>META_APP_ID</code> y
+       <code>META_APP_SECRET</code>. La mitad Google está en
+       <a href="google-cloud-setup.html">google-cloud-setup.html</a>.</p>
+    <div class="meta">
+      <span><b>Consola</b> developers.facebook.com</span>
+      <span><b>Tiempo</b> ~20 min</span>
+      <span><b>Etiquetas</b> en inglés, como las muestra la consola</span>
+    </div>
+  </div>
+</header>
+
+<section>
+<div class="wrap">
+
+  <figure>
+    <svg viewBox="0 0 900 118" role="img" aria-label="Orden de las ocho partes">
+      <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="11">
+        <rect x="4"   y="34" width="120" height="46" rx="6" fill="#eef4ff" stroke="#7aa7e9"/>
+        <text x="64"  y="53" text-anchor="middle" fill="#1d3a63">1–2</text>
+        <text x="64"  y="70" text-anchor="middle" fill="#1d3a63">App y products</text>
+
+        <rect x="148" y="34" width="120" height="46" rx="6" fill="#eef4ff" stroke="#7aa7e9"/>
+        <text x="208" y="53" text-anchor="middle" fill="#1d3a63">3</text>
+        <text x="208" y="70" text-anchor="middle" fill="#1d3a63">Basic Settings</text>
+
+        <rect x="292" y="34" width="120" height="46" rx="6" fill="#eef4ff" stroke="#7aa7e9"/>
+        <text x="352" y="53" text-anchor="middle" fill="#1d3a63">4</text>
+        <text x="352" y="70" text-anchor="middle" fill="#1d3a63">Redirect URIs</text>
+
+        <rect x="436" y="34" width="120" height="46" rx="6" fill="#e9f6ee" stroke="#5aa878"/>
+        <text x="496" y="53" text-anchor="middle" fill="#1e4b32">5</text>
+        <text x="496" y="70" text-anchor="middle" fill="#1e4b32">.env</text>
+
+        <rect x="580" y="34" width="120" height="46" rx="6" fill="#fff4e0" stroke="#e0a33e"/>
+        <text x="640" y="53" text-anchor="middle" fill="#6b4a12">6</text>
+        <text x="640" y="70" text-anchor="middle" fill="#6b4a12">App Review</text>
+
+        <rect x="724" y="34" width="172" height="46" rx="6" fill="#fdeceb" stroke="#d97066"/>
+        <text x="810" y="53" text-anchor="middle" fill="#7a2d24">7–8</text>
+        <text x="810" y="70" text-anchor="middle" fill="#7a2d24">Bans y prueba</text>
+
+        <g stroke="#9aa4b2" fill="none">
+          <path d="M124 57 h20"/><path d="M268 57 h20"/><path d="M412 57 h20"/>
+          <path d="M556 57 h20"/><path d="M700 57 h20"/>
+        </g>
+        <g fill="#9aa4b2">
+          <polygon points="146,57 139,54 139,60"/><polygon points="290,57 283,54 283,60"/>
+          <polygon points="434,57 427,54 427,60"/><polygon points="578,57 571,54 571,60"/>
+          <polygon points="722,57 715,54 715,60"/>
+        </g>
+        <text x="450" y="18" text-anchor="middle" fill="#5b6472" font-size="11">
+          La parte 1 no se puede rehacer sin crear otra app · la parte 7 es la que decide si Meta te deja seguir
+        </text>
+      </g>
+    </svg>
+  </figure>
+
+  <div class="card amber">
+    <h4>Dónde está todo</h4>
+    <p>Se crea en <code>developers.facebook.com/apps/creation/</code> y el resto vive en el
+       <b>App Dashboard</b> de esa app: <b>App settings</b> → <b>Basic</b> (partes 3),
+       <b>Products</b> (partes 2 y 4), <b>App Roles</b> y <b>App Review</b> (parte 6).</p>
+    <p>Meta tiene dos clases de app: las de <b>caso de uso</b>, que traen permisos fijos, y las
+       de <b>tipo</b>, que se arman añadiendo <b>Products</b>. Esta app es de tipo
+       <b>Business</b> — la parte 1 explica por qué.</p>
+  </div>
+
+</div>
+</section>
+
+<!-- ============================================================== 1 -->
+<section id="p1">
+<div class="wrap">
+  <h2><span class="n">1</span> Crear la app</h2>
+  <ol class="steps">
+    <li>Entra en <code>developers.facebook.com/apps/creation/</code>.</li>
+    <li><b>App details</b>: rellena con la tabla → <b>Next</b>.</li>
+    <li><b>Use cases</b>: elige <b>Other</b> → <b>Next</b> → tipo de app <b>Business</b>.</li>
+    <li><b>Business portfolio</b>: <b>I don't want to connect a business portfolio yet</b> → <b>Next</b>.</li>
+    <li><b>Requirements</b> → <b>Next</b> → <b>Overview</b> → <b>Go to dashboard</b>.</li>
+  </ol>
+
+  <table>
+    <thead><tr>
+      <th style="width:24%">Pantalla</th>
+      <th style="width:26%">Campo</th>
+      <th>Qué poner</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td rowspan="2">App details</td>
+        <td><b>App name</b></td>
+        <td><code>Marketing AI Manager</code> — es el nombre que el usuario ve en el diálogo
+            de login de Facebook.</td>
+      </tr>
+      <tr>
+        <td><b>App contact email</b></td>
+        <td>Tu correo. Aquí llegan los avisos de Meta sobre la app.</td>
+      </tr>
+      <tr>
+        <td>Use cases</td>
+        <td><b>Other</b></td>
+        <td>Al pulsar <b>Next</b> aparecen dos tipos: <b>Business</b> o <b>Consumer</b>.
+            Elige <b>Business</b>.</td>
+      </tr>
+      <tr>
+        <td>Business portfolio</td>
+        <td>Selector de portfolio</td>
+        <td><b>I don't want to connect a business portfolio yet</b>. Solo hace falta un
+            portfolio para acceder a datos que no son tuyos; se conecta después sin recrear
+            la app.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="card amber">
+    <h4>Por qué <b>Other</b> → <b>Business</b> y no un caso de uso de Marketing API</h4>
+    <p>La pantalla <b>Use cases</b> ofrece tres casos de Marketing API:</p>
+    <ul>
+      <li><b>Create &amp; manage ads with Marketing API</b> — crear y gestionar campañas.
+          Nada de Instagram orgánico.</li>
+      <li><b>Measure ad performance data with Marketing API</b> — solo lectura de métricas.</li>
+      <li><b>Capture &amp; manage ad leads with Marketing API</b> — formularios de leads. No aplica.</li>
+    </ul>
+    <p>El plausible es <b>Create &amp; manage ads with Marketing API</b>, y es el error: al
+       marcarlo, los casos de Instagram quedan <b>en gris</b> — son incompatibles — y esta
+       aplicación necesita las dos cosas en la misma app
+       (<code>ads_management</code> y <code>instagram_content_publish</code> viven en el
+       mismo token).</p>
+    <p><b>Other</b> → <b>Business</b> no tiene esa restricción. Meta lo describe así:</p>
+    <pre>Create or manage business assets like Pages, Events, Groups, Ads,
+Messenger, WhatsApp, and Instagram Graph API using the available
+business permissions, features, and products.</pre>
+    <p>Y es además obligatorio por otro lado: <b>Facebook Login for Business</b> — el flujo
+       OAuth que usa la aplicación — exige una app de tipo Business.</p>
+  </div>
+
+  <div class="card amber">
+    <h4>Dos etiquetas sin verificar</h4>
+    <p>La documentación de Meta describe las dos primeras pantallas en prosa
+       («enter app name and contact email»), no cita los <em>labels</em>. <b>App name</b> y
+       <b>App contact email</b> están tomados de esa prosa y de <b>Basic Settings</b>, donde
+       el segundo aparece como <b>Contact Email</b>. Si la pantalla muestra otra cosa, es la
+       pantalla la que manda.</p>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================== 2 -->
+<section id="p2">
+<div class="wrap">
+  <h2><span class="n">2</span> Añadir los dos products</h2>
+  <ol class="steps">
+    <li>Menú lateral del App Dashboard → <b>Add Products</b>.</li>
+    <li><b>Facebook Login for Business</b> → <b>Set Up</b>.</li>
+    <li><b>Marketing API</b> → <b>Set Up</b>.</li>
+  </ol>
+
+  <table>
+    <thead><tr>
+      <th style="width:34%">Product</th>
+      <th>Para qué en esta aplicación</th>
+    </tr></thead>
+    <tbody>
+      <tr><td><b>Facebook Login for Business</b></td>
+          <td>El OAuth con el que cada cuenta conecta su Meta. Aquí se registran los redirect
+              URIs de la parte 4.</td></tr>
+      <tr><td><b>Marketing API</b></td>
+          <td><code>ads_management</code>, <code>ads_read</code> y
+              <code>business_management</code>: campañas y métricas.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="card amber">
+    <h4>No busques un product de Instagram</h4>
+    <p>No hay ninguno que añadir. El modo que usa esta aplicación es <b>Instagram API with
+       Facebook Login</b>: los permisos de Instagram
+       (<code>instagram_basic</code>, <code>instagram_manage_insights</code>,
+       <code>instagram_content_publish</code>) se piden en el propio diálogo de Facebook
+       Login, junto a los de Pages.</p>
+    <p>La cuenta de Instagram tiene que ser profesional y estar vinculada a una página de
+       Facebook, o esos permisos no devuelven nada aunque el token sea válido.</p>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================== 3 -->
+<section id="p3">
+<div class="wrap">
+  <h2><span class="n">3</span> Copiar App ID y App Secret</h2>
+  <ol class="steps">
+    <li>Menú lateral → <b>App settings</b> → <b>Basic</b> (la página se titula <b>Basic Settings</b>).</li>
+    <li>Copia <b>App ID</b>. En <b>App Secret</b> pulsa <b>Show</b> y copia el valor.</li>
+    <li>Rellena los demás campos con la tabla y pulsa <b>Save changes</b>.</li>
+  </ol>
+
+  <table>
+    <thead><tr>
+      <th style="width:32%">Campo</th>
+      <th>Valor</th>
+    </tr></thead>
+    <tbody>
+      <tr><td><b>App ID</b></td>
+          <td>Va a <code>META_APP_ID</code> en la parte 5.</td></tr>
+      <tr><td><b>App Secret</b></td>
+          <td>Va a <code>META_APP_SECRET</code>. Se puede volver a ver con <b>Show</b>, pero
+              pide la contraseña de la cuenta.</td></tr>
+      <tr><td><b>App Domains</b></td>
+          <td><code>mazzeflow.com</code> — sin <code>https://</code> y sin barra final.</td></tr>
+      <tr><td><b>Privacy Policy URL</b></td>
+          <td><code>https://mazzeflow.com/privacy</code></td></tr>
+      <tr><td><b>Terms of Service URL</b></td>
+          <td>Vacío. No es obligatorio para desarrollo.</td></tr>
+      <tr><td><b>Contact Email</b></td>
+          <td>Tu correo.</td></tr>
+      <tr><td><b>App Icon</b>, <b>Category</b></td>
+          <td>Vacíos ahora. Los pide <b>App Review</b>, no el desarrollo.</td></tr>
+    </tbody>
+  </table>
+</div>
+</section>
+
+<!-- ============================================================== 4 -->
+<section id="p4">
+<div class="wrap">
+  <h2><span class="n">4</span> Registrar los redirect URIs</h2>
+  <ol class="steps">
+    <li>Menú lateral → <b>Products</b> → <b>Facebook Login</b> → <b>Settings</b>.</li>
+    <li>En <b>Client OAuth Settings</b>, campo <b>Valid OAuth Redirect URIs</b>.</li>
+    <li>Pega las dos, una por línea:
+<pre>https://mazzeflow.com/api/v1/integrations/meta/oauth/callback
+http://localhost/api/v1/integrations/meta/oauth/callback</pre></li>
+    <li><b>Save changes</b>.</li>
+  </ol>
+
+  <div class="card amber">
+    <h4>Coincidencia exacta, carácter por carácter</h4>
+    <p>Meta lo dice así sobre <b>Strict Mode</b>, que está activo por defecto:</p>
+    <pre>Strict Mode prevents hijacking of your redirect URIs by requiring an
+exact match from your Valid OAuth redirect URIs list.</pre>
+    <p>Y aquí hay una diferencia con Google que se paga caro: el redirect de Meta
+       <b>no se deriva de <code>APP_URL</code></b>. Es su propia variable,
+       <code>META_REDIRECT_URI</code>, y si no es idéntica a la registrada aquí el diálogo
+       falla. Google sí lo deriva; Meta no.</p>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================== 5 -->
+<section id="p5">
+<div class="wrap">
+  <h2><span class="n">5</span> Pegar las credenciales</h2>
+  <p>Las cuatro líneas, en el <code>src/.env</code> del entorno que toque:</p>
+<pre>META_APP_ID=<em>el App ID de la parte 3</em>
+META_APP_SECRET=<em>el App Secret de la parte 3</em>
+META_REDIRECT_URI=https://mazzeflow.com/api/v1/integrations/meta/oauth/callback
+META_GRAPH_VERSION=v26.0</pre>
+
+  <table>
+    <thead><tr>
+      <th style="width:22%">Entorno</th>
+      <th style="width:40%">Fichero</th>
+      <th>Después</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td>Local</td>
+        <td><code>src/.env</code>, con
+            <code>META_REDIRECT_URI=http://localhost/api/v1/integrations/meta/oauth/callback</code></td>
+        <td>Nada más.</td>
+      </tr>
+      <tr>
+        <td>Producción</td>
+        <td><code>/var/www/marketing-ai-manager/src/.env</code></td>
+        <td>Rehacer la caché de configuración, o el cambio <b>no surte efecto</b>:
+<pre>./scripts/deploy.sh</pre></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p><code>META_GRAPH_VERSION</code> tiene <code>v26.0</code> por defecto en
+     <code>config/services.php</code>; solo se pone en <code>.env</code> para fijar otra
+     versión. Toda llamada sale contra <code>https://graph.facebook.com/</code> + esa
+     versión.</p>
+</div>
+</section>
+
+<!-- ============================================================== 6 -->
+<section id="p6">
+<div class="wrap">
+  <h2><span class="n">6</span> Modo de desarrollo, roles y App Review</h2>
+  <ol class="steps">
+    <li>Deja la app en <b>Development mode</b> mientras no haya usuarios externos.</li>
+    <li>Menú lateral → <b>App Roles</b> → <b>Roles</b> → <b>Add People</b> para cada persona
+        que vaya a conectar su Meta.</li>
+    <li>Cuando toque abrirla, <b>App Review</b> → pide <b>solo</b> los ocho permisos de la
+        tabla.</li>
+  </ol>
+
+  <table>
+    <thead><tr>
+      <th style="width:22%">Modo</th>
+      <th>Qué permite, en palabras de Meta</th>
+    </tr></thead>
+    <tbody>
+      <tr><td><b>Development</b></td>
+          <td><pre>Apps in Development mode can only request permissions
+from role users</pre>
+              Sin App Review. Cubre a <b>admins</b>, <b>developers</b> y <b>testers</b> — con
+              eso se desarrolla y se prueba entero.</td></tr>
+      <tr><td><b>Live</b></td>
+          <td><pre>Apps in Live mode can request permissions from anyone, but
+only permissions approved through App Review</pre></td></tr>
+    </tbody>
+  </table>
+
+  <p>Los permisos que pide la aplicación, tal como están en <code>config/services.php</code>.
+     Pedir uno más es motivo de rechazo en App Review:</p>
+
+  <table>
+    <thead><tr>
+      <th style="width:34%">Permiso</th>
+      <th>Para qué</th>
+    </tr></thead>
+    <tbody>
+      <tr><td><code>ads_management</code></td><td>Crear y editar campañas</td></tr>
+      <tr><td><code>ads_read</code></td><td>Leer campañas y métricas</td></tr>
+      <tr><td><code>business_management</code></td><td>Resolver cuentas publicitarias y activos</td></tr>
+      <tr><td><code>pages_show_list</code></td><td>Listar las páginas del usuario</td></tr>
+      <tr><td><code>pages_read_engagement</code></td><td>Leer la actividad de la página</td></tr>
+      <tr><td><code>instagram_basic</code></td><td>Perfil y media de la cuenta de Instagram</td></tr>
+      <tr><td><code>instagram_manage_insights</code></td><td>Métricas de Instagram</td></tr>
+      <tr><td><code>instagram_content_publish</code></td><td>Publicar en el feed</td></tr>
+    </tbody>
+  </table>
+
+  <div class="card amber">
+    <h4>Identidad real, no una cuenta de usar y tirar</h4>
+    <p>El App Review y la <b>Business Verification</b> se hacen contra la identidad del
+       negocio: nombre, dominio, documentación. Una app creada desde una cuenta personal
+       recién hecha, con un dominio que no responde, se rechaza antes de que nadie mire el
+       código.</p>
+    <p>Y <code>instagram_content_publish</code> exige App Review sí o sí para usuarios que no
+       sean role users. Meta lo describe como permitir
+       «create organic feed photo and video posts on behalf of a business user».</p>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================== 7 -->
+<section id="p7">
+<div class="wrap">
+  <h2><span class="n">7</span> Cómo no acabar con la cuenta publicitaria baneada</h2>
+
+  <div class="card red">
+    <h4>Nunca pegues un token personal del developer dashboard</h4>
+    <p>La ola de suspensiones de 2026 no va de gastar mucho ni de creatividades. Va de
+       <b>cómo</b> habla la herramienta con la Marketing API, y hay dos patrones que Meta
+       castiga:</p>
+    <ul>
+      <li><b>Token personal en lugar de OAuth.</b> Herramientas que se saltan App Review
+          pidiendo al cliente que genere un token en el developer dashboard y lo pegue. Las
+          peticiones con ese token <b>no se pueden atribuir a ninguna app verificada</b>, así
+          que Meta las trata como un actor desconocido operando sobre la cuenta.</li>
+      <li><b>Escritura desatendida.</b> Una herramienta con permiso de escritura sobre la
+          cuenta publicitaria que crea, edita o reintenta sin nadie delante. La detección de
+          anomalías lo marca y la cuenta se desactiva en días.</li>
+    </ul>
+    <p>Esta aplicación evita los dos <b>por construcción</b>: es una app registrada con un
+       grant OAuth real por usuario, y toda mutación pasa por una <b>propuesta</b> que una
+       persona aprueba antes de que se ejecute nada.</p>
+    <p><b>La única forma de reintroducir el riesgo es deshacer eso.</b> Concretamente: pegar
+       un token personal de Meta en el campo <b>API key</b> de Configuración →
+       Integraciones en lugar de pulsar <b>Conectar</b>. No lo hagas nunca — ni «solo para
+       probar», ni «solo en local con la cuenta real».</p>
+  </div>
+
+  <table>
+    <thead><tr>
+      <th style="width:44%">Patrón</th>
+      <th>Qué hace esta aplicación</th>
+    </tr></thead>
+    <tbody>
+      <tr><td>Token pegado a mano, sin app verificada detrás</td>
+          <td>OAuth contra esta app; el token se guarda cifrado por cuenta en
+              <code>integrations</code> y nadie lo teclea.</td></tr>
+      <tr><td>Agente autónomo escribiendo directo en la Marketing API</td>
+          <td>Las herramientas de mutación devuelven una propuesta; no ejecutan.</td></tr>
+      <tr><td>Reintentos en bucle contra errores de la API</td>
+          <td>El cliente lanza una excepción de dominio y para.</td></tr>
+      <tr><td>Permisos de más «por si acaso»</td>
+          <td>Los ocho de la parte 6, ni uno más.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="card amber">
+    <h4>De dónde sale esto</h4>
+    <p>El patrón de los tokens personales no está en la documentación de Meta: viene del
+       análisis de la ola de 2026 publicado por herramientas y agencias del sector, que
+       coinciden en la misma secuencia — se conecta una herramienta nueva, la cuenta se
+       desactiva en días, y la apelación es automática y no explica nada.</p>
+    <p>Meta sí publicó en <b>abril de 2026</b> un camino oficial para clientes de IA
+       (servidor MCP y CLI propios de Meta Ads). No es lo que usa esta aplicación —
+       aquí las llamadas salen de la app registrada — pero confirma cuál era el problema.</p>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================== 8 -->
+<section id="p8">
+<div class="wrap">
+  <h2><span class="n">8</span> Probar</h2>
+  <ol class="steps">
+    <li>Entra en la aplicación con una cuenta que sea <b>role user</b> de la app.</li>
+    <li><b>Configuración</b> → <b>Integraciones</b> → tarjeta <b>meta</b> → <b>Conectar</b>.</li>
+    <li>Acepta el diálogo de Facebook y elige la cuenta publicitaria y la página.</li>
+    <li>De vuelta, la tarjeta debe decir <code>connected</code>. <b>Verificar</b> la revalida
+        contra <code>me</code> y <code>me/adaccounts</code>.</li>
+  </ol>
+
+  <table>
+    <thead><tr>
+      <th style="width:38%">Error</th>
+      <th>Causa</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td><code>URL Blocked</code> al abrir el diálogo</td>
+        <td>El URI de la parte 4 no coincide con <code>META_REDIRECT_URI</code>. Revisa
+            <code>http</code> vs <code>https</code>, el puerto y la barra final.</td>
+      </tr>
+      <tr>
+        <td><code>Invalid Scopes</code> con uno o varios permisos</td>
+        <td>Falta el product de la parte 2, o el permiso no está aprobado y el usuario no es
+            role user (parte 6).</td>
+      </tr>
+      <tr>
+        <td>El diálogo abre pero no lista cuentas publicitarias</td>
+        <td>La persona que autoriza no tiene rol sobre esa cuenta en Meta. Es un permiso de
+            Meta, no de la aplicación.</td>
+      </tr>
+      <tr>
+        <td>Instagram conecta pero devuelve vacío</td>
+        <td>La cuenta de Instagram no es profesional o no está vinculada a la página
+            (parte 2).</td>
+      </tr>
+      <tr>
+        <td>La integración pasa a <code>error</code> tras funcionar</td>
+        <td>Token caducado o revocado. Botón <b>Reconectar</b>; el <code>last_error</code> de
+            la tarjeta dice cuál de los dos.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Marketing AI Manager · <a href="google-cloud-setup.html">Configurar Google Cloud</a> ·
+       <a href="user-credentials-setup.html">Credenciales del usuario</a> ·
+       <a href="project-map.html">Mapa del proyecto</a> ·
+       <a href="system-flows.html">Flujos del sistema</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
