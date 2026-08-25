@@ -94,13 +94,6 @@ services:
       - redis-data:/data
     networks: [marketing-ai-network]
 
-  mailpit:
-    container_name: marketing-ai-mailpit-dev
-    image: axllent/mailpit:latest
-    ports:
-      - "${MAILPIT_PORT:-8025}:8025"
-    networks: [marketing-ai-network]
-
   loki:
     container_name: marketing-ai-loki-dev
     image: grafana/loki:latest

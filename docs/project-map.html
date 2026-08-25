@@ -244,10 +244,8 @@
 
     <path class="edge" d="M470 44 L200 44 L200 96" marker-end="url(#a2)"/>
     <path class="edge" d="M540 44 L540 96" marker-end="url(#a2)"/>
-    <path class="edge" d="M610 44 L880 44 L880 96" marker-end="url(#a2)"/>
-    <text class="t-mono" x="196" y="70" text-anchor="end">:8080</text>
+    <text class="t-mono" x="196" y="70" text-anchor="end">:80</text>
     <text class="t-mono" x="536" y="70" text-anchor="end">:5173</text>
-    <text class="t-mono" x="876" y="70" text-anchor="end">:8025</text>
 
     <rect class="group" x="16" y="88" width="1048" height="366" rx="14"/>
     <text class="t-cap" x="34" y="110">Red marketing-ai-network</text>
@@ -259,10 +257,6 @@
     <rect class="box box-purple" x="450" y="122" width="180" height="58" rx="10"/>
     <text class="t-title" x="540" y="146" text-anchor="middle">node</text>
     <text class="t-mono" x="540" y="164" text-anchor="middle">Vite · HMR</text>
-
-    <rect class="box box-surface" x="790" y="122" width="180" height="58" rx="10"/>
-    <text class="t-title" x="880" y="146" text-anchor="middle">mailpit</text>
-    <text class="t-mono" x="880" y="164" text-anchor="middle">correo de dev</text>
 
     <path class="edge-strong" d="M200 180 L200 226" marker-end="url(#a3)"/>
     <text class="t-mono" x="210" y="207">fastcgi :9000</text>
@@ -315,9 +309,8 @@
 
   <table>
     <tr><th>Servicio</th><th>Puerto en el host</th><th>Para qué</th></tr>
-    <tr><td><code>nginx</code></td><td><b>8080</b></td><td>La aplicación</td></tr>
+    <tr><td><code>nginx</code></td><td><b>80</b></td><td>La aplicación</td></tr>
     <tr><td><code>node</code></td><td><b>5173</b></td><td>Servidor de Vite con recarga en caliente</td></tr>
-    <tr><td><code>mailpit</code></td><td><b>8025</b></td><td>Bandeja de correo de desarrollo</td></tr>
     <tr><td><code>db</code></td><td><b>3307</b> → 3306</td><td>MySQL. Dos esquemas: la app y las pruebas</td></tr>
     <tr><td><code>redis</code></td><td><b>6380</b> → 6379</td><td>Caché, sesiones y colas</td></tr>
     <tr><td><code>app</code></td><td>—</td><td>php-fpm, con <code>./src</code> montado</td></tr>
@@ -336,20 +329,24 @@
 
   <figure>
   <svg viewBox="0 0 1080 460" role="img" aria-label="Topología de contenedores en producción">
-    <rect class="box box-surface" x="430" y="0" width="220" height="40" rx="10"/>
-    <text class="t-title" x="540" y="25" text-anchor="middle">Internet</text>
+    <rect class="box box-surface" x="150" y="6" width="200" height="40" rx="10"/>
+    <text class="t-title" x="250" y="31" text-anchor="middle">Internet</text>
 
-    <path class="edge" d="M500 40 L440 40 L440 92" marker-end="url(#b2)"/>
-    <path class="edge-strong" d="M580 40 L640 40 L640 92" marker-end="url(#b3)"/>
-    <text class="t-mono" x="434" y="70" text-anchor="end">:80</text>
-    <text class="t-mono" x="650" y="70">:443</text>
+    <path class="edge-strong" d="M350 26 L474 26" marker-end="url(#b3)"/>
+    <text class="t-mono" x="412" y="18" text-anchor="middle">:443 · HTTPS</text>
+
+    <rect class="box box-blue" x="480" y="6" width="300" height="40" rx="10"/>
+    <text class="t-title" x="630" y="31" text-anchor="middle">Cloudflare · aquí termina el TLS</text>
+
+    <path class="edge" d="M630 46 L630 92" marker-end="url(#b2)"/>
+    <text class="t-mono" x="642" y="74">:80 · HTTP en claro</text>
 
     <rect class="group" x="16" y="84" width="1048" height="360" rx="14"/>
     <text class="t-cap" x="34" y="106">VPS · red interna de Docker</text>
 
     <rect class="box box-blue" x="330" y="118" width="420" height="72" rx="10"/>
     <text class="t-title" x="540" y="144" text-anchor="middle">nginx</text>
-    <text class="t-mono" x="540" y="162" text-anchor="middle">80 → 301 → 443 · TLS Let's Encrypt</text>
+    <text class="t-mono" x="540" y="162" text-anchor="middle">:80 sin certificado · UFW solo abre 80 a Cloudflare</text>
     <text class="t-mono" x="540" y="179" text-anchor="middle">/build/ con caché de 1 año, immutable</text>
 
     <path class="edge-strong" d="M540 190 L540 210 L280 210 L280 232" marker-end="url(#b3)"/>
@@ -389,8 +386,10 @@
         <path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
     </defs>
   </svg>
-  <figcaption>El perfil <code>observability</code> añade Loki, Promtail y Grafana; Grafana
-    queda atado a <code>127.0.0.1:3000</code> y se alcanza por túnel SSH, nunca desde
+  <figcaption>El salto de Cloudflare al origen va sin cifrar — eso es lo que significa el
+    modo <b>Flexible</b> — y solo es tolerable porque UFW abre el puerto 80 únicamente a los
+    rangos de Cloudflare. El perfil <code>observability</code> añade Loki, Promtail y Grafana;
+    Grafana queda atado a <code>127.0.0.1:3000</code> y se alcanza por túnel SSH, nunca desde
     internet.</figcaption>
   </figure>
 
@@ -398,8 +397,9 @@
     <div class="card green">
       <h4>Qué se expone</h4>
       <ul>
-        <li><b>443</b> y <b>80</b> — nginx</li>
+        <li><b>80</b> — nginx, y solo desde los rangos de Cloudflare</li>
         <li><b>22</b> — SSH</li>
+        <li><b>443 cerrado</b>: nada escucha ahí</li>
         <li>Nada más. UFW deniega el resto</li>
       </ul>
     </div>
@@ -416,8 +416,7 @@
   <div class="card amber">
     <h4>Diferencias reales entre dev y producción</h4>
     <p>Añade <code>scheduler</code>, <code>restart: unless-stopped</code> y healthchecks.
-       Quita <code>node</code> (los assets se compilan durante el despliegue) y
-       <code>mailpit</code>. Monta <code>php.prod.ini</code>, con opcache activo y
+       Quita <code>node</code>: los assets se compilan durante el despliegue. Monta <code>php.prod.ini</code>, con opcache activo y
        <code>validate_timestamps=0</code>: el código no se relee del disco, y por eso cada
        despliegue reconstruye las cachés.</p>
   </div>

@@ -30,7 +30,7 @@ Ten targets, deliberately. Everything the Makefile does not cover is reachable
 with `make exec` or `make artisan CMD="..."`.
 
 `make up` on a fresh clone is the whole setup; the app comes up at
-http://localhost:8080.
+http://localhost.
 
 Production runs from the server, not from here: `./scripts/deploy.sh`. See
 [`docs/deployment.md`](./docs/deployment.md).

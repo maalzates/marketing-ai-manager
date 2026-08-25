@@ -17,7 +17,7 @@ before the first deploy.
 4. [Server setup (the scripted path)](#4-server-setup-the-scripted-path)
 5. [Server setup (the manual path)](#5-server-setup-the-manual-path)
 6. [The two environment files](#6-the-two-environment-files)
-7. [TLS certificates](#7-tls-certificates)
+7. [TLS and Cloudflare](#7-tls-and-cloudflare)
 8. [Automatic deployment with GitHub Actions](#8-automatic-deployment-with-github-actions)
 9. [What `deploy.sh` actually does](#9-what-deploysh-actually-does)
 10. [Rollback](#10-rollback)
@@ -37,9 +37,13 @@ before the first deploy.
                   Actions: CI ──► Actions: Deploy
                                        │ ssh
                                        ▼
+                    visitor ──HTTPS:443──► Cloudflare
+                                               │ HTTP :80, in the clear
+                                               ▼
 ┌──────────────────────── VPS (Ubuntu 24.04) ────────────────────────┐
 │                                                                    │
-│  nginx  :80 → 301 → :443 (TLS, Let's Encrypt)                      │
+│  nginx  :80 only, no certificate. UFW allows :80 from              │
+│    │    Cloudflare ranges alone; :443 is closed                    │
 │    │                                                               │
 │    ├── /build/*, /*.css, /*.js  →  static files from src/public    │
 │    └── everything else          →  php-fpm (app)                   │
@@ -69,7 +73,7 @@ that is the moment to switch to pushing images.
 |---|---|
 | A VPS | Ubuntu 22.04 or 24.04, 2 vCPU / 4 GB RAM minimum. Hostinger, Hetzner, DigitalOcean — any of them. |
 | Root SSH access | You will harden it later. |
-| A domain | Pointed at the VPS. Cloudflare or the registrar's own DNS, either works. |
+| A domain on Cloudflare | Nameservers pointed at Cloudflare. This is not optional: TLS terminates there, so without Cloudflare the site is served over plain HTTP. |
 | A GitHub repo | `maalzates/marketing-ai-manager`, with Actions enabled. |
 | API keys | `ANTHROPIC_API_KEY`, plus whatever the app grows into. |
 
@@ -81,30 +85,38 @@ in a throwaway `node:22-alpine` container.
 
 ## 3. DNS first
 
-TLS issuance validates that you control the domain by resolving it. So DNS goes
-before everything else — a certificate request against a domain that does not
-resolve to this box fails, and Let's Encrypt rate-limits failures.
+DNS goes before everything else, because the origin never sees a hostname the
+visitor typed — it sees whatever Cloudflare forwards, and it serves by name.
 
-Create one record:
+Create the records in Cloudflare:
 
 | Type | Name | Value | Proxy |
 |---|---|---|---|
-| A | `@` (or `marketing`) | your VPS IPv4 | **DNS only** for the first issuance |
+| A | `@` | your VPS IPv4 | **Proxied** (orange cloud) |
+| A | `www` | your VPS IPv4 | **Proxied** (orange cloud) |
 
-Then verify from your laptop:
+Then set **SSL/TLS → Overview → Flexible**. That is the mode this stack is built
+for: HTTPS between the visitor and Cloudflare, plain HTTP between Cloudflare and
+the origin. Section 7 explains what that costs and what pays for it.
+
+Verify from your laptop:
 
 ```bash
 dig +short marketing.example.com
-# must print the VPS IP, nothing else
+# prints Cloudflare IPs (104.x / 172.6x), NOT the VPS IP — that is correct
+# when the record is proxied
 ```
 
-**If you use Cloudflare:** keep the record grey-clouded (DNS only) until the
-certificate is issued. Once it works, you may turn the orange cloud on — and if
-you do, set SSL/TLS mode to **Full (strict)**. Any other mode either breaks the
-redirect loop or silently strips TLS between Cloudflare and your origin.
+The VPS IP is deliberately not what resolves. If `dig` prints the VPS IP, the
+record is grey-clouded and nothing in section 7 applies: the origin would be
+answering the internet directly, in the clear.
 
-DNS propagation is usually seconds, occasionally an hour. Wait for `dig` to be
-right before continuing.
+**Do not set Full or Full (strict).** The origin has no certificate and no `:443`
+listener. Full makes Cloudflare try HTTPS to the origin and every request fails;
+"Off" strips TLS from the visitor. Flexible is the only mode that matches this
+configuration.
+
+DNS propagation is usually seconds, occasionally an hour.
 
 ---
 
@@ -124,14 +136,14 @@ The script is idempotent and pauses at every point where it needs you:
 |---|---|---|
 | 1–2 | System update, base packages | nothing |
 | 3 | Docker Engine + Compose plugin | nothing |
-| 4 | UFW: deny inbound except 22, 80, 443 | nothing |
+| 4 | UFW: deny inbound, allow 22 only. Port 80 is opened per Cloudflare range in step 11; 443 stays closed | nothing |
 | 5 | fail2ban enabled | nothing |
 | 6 | 4 GB swap file | nothing |
 | 7 | Unattended security upgrades | nothing |
 | 8 | Generates an ed25519 key, prints the public half | **add it as a deploy key on GitHub**, then press Enter |
 | 9 | Clones the repo to `/var/www/marketing-ai-manager` | nothing |
 | 10 | Creates `.env.docker` (random passwords) and `src/.env` | **set `APP_DOMAIN`, then the Laravel secrets**, press Enter between the two |
-| 11 | Issues the TLS certificate with certbot standalone | confirm DNS is ready |
+| 11 | Installs the Cloudflare range refresher (nginx `real_ip` + the UFW allowlist for :80) and the fail2ban GitHub Actions exemption, then enables both systemd timers | confirm the records are proxied and SSL/TLS is Flexible |
 | 12 | Builds images, starts the stack, migrates, builds assets, caches config | nothing |
 | 13 | Installs a nightly `mysqldump` cron, 14-day retention | nothing |
 
@@ -151,7 +163,7 @@ It is exactly what the script does.
 ```bash
 # 5.1 System
 apt-get update && apt-get upgrade -y
-apt-get install -y ca-certificates curl git gnupg lsb-release unzip ufw fail2ban certbot cron
+apt-get install -y ca-certificates curl git gnupg lsb-release unzip ufw fail2ban cron jq dnsutils
 
 # 5.2 Docker
 install -m 0755 -d /etc/apt/keyrings
@@ -162,10 +174,11 @@ apt-get update
 apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 systemctl enable --now docker
 
-# 5.3 Firewall — deny everything inbound except SSH and the web
+# 5.3 Firewall — SSH from anywhere, :80 only from Cloudflare, :443 never
+#      The per-range rules for :80 are written by the refresher in section 7.
 ufw default deny incoming
 ufw default allow outgoing
-ufw allow 22/tcp && ufw allow 80/tcp && ufw allow 443/tcp
+ufw allow 22/tcp
 ufw --force enable
 
 # 5.4 Swap — 4 GB. MySQL + composer + a Vite build will OOM a 4 GB box without it.
@@ -271,49 +284,110 @@ for that, including the exact redirect URIs this deployment must register.
 
 ---
 
-## 7. TLS certificates
+## 7. TLS and Cloudflare
 
-### First issuance — standalone
+**There is no certificate on this server, and no certbot.** TLS terminates at
+Cloudflare in **Flexible** mode: the visitor talks HTTPS to Cloudflare,
+Cloudflare talks plain HTTP to the origin on port 80. Issuing a Let's Encrypt
+certificate here would be dead weight — Cloudflare would never present it.
 
-Nginx is not running yet, so certbot can take port 80 for itself:
+### What that costs, and what pays for it
+
+The hop from Cloudflare to the box is **unencrypted**. That is what Flexible
+means. It is only acceptable because port 80 is reachable **from Cloudflare's
+ranges alone**:
 
 ```bash
-certbot certonly --standalone --non-interactive --agree-tos \
-    -d marketing.example.com -m admin@marketing.example.com
+ufw status
+# 22/tcp   ALLOW  Anywhere
+# 80/tcp   ALLOW  173.245.48.0/20        <- one rule per Cloudflare range
+# 80/tcp   ALLOW  103.21.244.0/22
+# ...
+# 443 does not appear: nothing listens there
 ```
 
-Certificates land in `/etc/letsencrypt/live/marketing.example.com/`, which
-`docker-compose.prod.yml` mounts read-only into nginx.
+If that restriction is ever lifted, anyone who finds the origin IP reads the
+traffic in the clear — and, worse, can forge `CF-Connecting-IP`, because nginx
+and Laravel are both configured to trust it (`src/bootstrap/app.php`). The
+firewall rule and trusting the proxy are **one decision, not two**.
+
+### The two things nginx needs from the host
 
 `docker/nginx/default.prod.conf.template` is an nginx *template*: the official
 image runs `envsubst` over it at start-up and substitutes `${APP_DOMAIN}`. That
 is why the domain is a compose variable and not hardcoded.
 
-### Renewal
+Its first directive is `include /etc/nginx/cloudflare/real-ip.conf`, and
+`docker-compose.prod.yml` mounts `/etc/nginx/cloudflare` from the host. **If that
+file does not exist, nginx refuses to start.** It is generated by the refresher
+below — which is why the refresher runs once during setup, before the stack comes
+up, and not only on its timer.
 
-`certbot.timer` renews automatically. The one thing it cannot do on its own is
-tell nginx to pick up the new file, so `setup-production.sh` installs a deploy
-hook:
+Without it, every log line, every rate limit and every action-log entry would
+record Cloudflare's IP instead of the visitor's.
 
-```sh
-# /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
-docker exec marketing-ai-nginx nginx -s reload || true
-```
+### The refresher
 
-Test the whole path without spending a rate-limit:
+`/usr/local/sbin/cloudflare-ranges-refresh` does two jobs from one source of
+truth — <https://www.cloudflare.com/ips-v4> and `ips-v6`:
+
+1. Writes `/etc/nginx/cloudflare/real-ip.conf`: one `set_real_ip_from` per range,
+   plus `real_ip_header CF-Connecting-IP` and `real_ip_recursive on`.
+2. **Rebuilds** the UFW allowlist for `:80` from scratch, so a range Cloudflare
+   retires stops being allowed. Deleting first is the point — appending would
+   only ever grow the list.
+
+It refuses to install a list shorter than 5 IPv4 entries: a failed fetch that
+left the file empty would lock Cloudflare out and take the site down.
+
+`cloudflare-ranges-refresh.timer` runs it weekly (`RandomizedDelaySec=2h`,
+`Persistent=true`) and its service reloads nginx afterwards if the container is
+running.
 
 ```bash
-certbot renew --dry-run
+systemctl list-timers cloudflare-ranges-refresh.timer
+/usr/local/sbin/cloudflare-ranges-refresh    # safe to run by hand, idempotent
 ```
 
-If renewal fails because port 80 is busy, switch that domain to the webroot
-challenge — the nginx config already serves `/.well-known/acme-challenge/` from
-the `certbot-webroot` volume:
+### The other timer: keeping fail2ban off the CI runner
+
+Same section of `setup-production.sh`, different problem. fail2ban bans IPs after
+failed SSH attempts, and **GitHub Actions runners come from ranges that change
+without notice**. When one gets banned the deploy fails weeks later with nothing
+in the Actions log but a timeout.
+
+- `/usr/local/sbin/github-ranges-refresh` caches `.actions[]` from
+  `https://api.github.com/meta` into `/etc/fail2ban/github-actions-ranges.txt`,
+  and refuses to install fewer than 100 entries.
+- `/usr/local/sbin/fail2ban-ignore-github` is the `ignorecommand`: it checks one
+  IP against that **cached** file. Cached and not live on purpose — fail2ban
+  calls it for every candidate, and a network round trip per attempt would be its
+  own denial of service. `ignoreip` cannot carry the list: GitHub publishes
+  ~7000 ranges.
+- The `sshd` jail runs `mode = normal`, deliberately **not** `aggressive`:
+  aggressive bans on `Connection closed by authenticating user`, which is exactly
+  what a CI runner reconnecting looks like.
+- `github-ranges-refresh.timer` runs daily, `RandomizedDelaySec=1h`.
 
 ```bash
-certbot certonly --webroot -w /var/lib/docker/volumes/marketing-ai_certbot-webroot/_data \
-    -d marketing.example.com
+/usr/local/sbin/fail2ban-ignore-github 4.175.114.51 ; echo $?   # 0 — exempt
+/usr/local/sbin/fail2ban-ignore-github 8.8.8.8 ; echo $?        # 1 — not exempt
 ```
+
+### Verifying the whole path
+
+```bash
+curl -sI https://marketing.example.com | head -1        # 200, from anywhere
+curl -sI http://VPS_IP -m 5                             # must time out: not a Cloudflare IP
+ss -lntp | grep ':443'                                  # no output — correct
+docker exec marketing-ai-nginx nginx -t                 # syntax OK, real-ip.conf found
+```
+
+`APP_URL` in `src/.env` stays on **`https://`** even though the origin speaks
+HTTP. It is what the visitor sees, and it is what Laravel must generate; nginx
+passes `HTTPS=on` to php-fpm when `X-Forwarded-Proto: https` arrives, so
+`url()` and `route()` build `https://` links and the browser does not block them
+as mixed content.
 
 ---
 
@@ -398,14 +472,16 @@ commit hash. You can also trigger it by hand: Actions → *Deploy to production*
 ```
 1. git fetch + git reset --hard origin/main   ← survives a force-push
 2. docker compose up -d --build               ← no-op when the Dockerfile is unchanged
-3. wait for MySQL to answer mysqladmin ping
-4. composer install --no-dev --optimize-autoloader
-5. npm ci && npm run build   (inside a throwaway node:22-alpine container)
+   then wait for MySQL to answer mysqladmin ping
+3. composer install --no-dev --optimize-autoloader
+4. npm ci && npm run build   (inside a throwaway node:22-alpine container)
+5. chown -R www-data storage bootstrap/cache  ← a fresh clone lands as root
 6. php artisan migrate --force
 7. php artisan db:seed --force               ← roles + knowledge entries, idempotent
 8. optimize:clear, then config:cache / route:cache / view:cache / event:cache
 9. queue:restart + restart app, queue, scheduler — then nginx, last
-10. curl https://APP_DOMAIN/up  ×10 with backoff  → non-zero exit if it never answers
+10. curl -H "Host: APP_DOMAIN" http://127.0.0.1/up  ×10 with backoff
+    → non-zero exit if it never answers
 ```
 
 Points worth understanding:
@@ -427,6 +503,13 @@ Points worth understanding:
   web tier and old code to the queue tier.
 - **Assets are built in a container.** The server never needs a Node toolchain,
   and a Node version bump is a one-line change here rather than a server change.
+- **Step 5 is not optional, and its absence is invisible.** php-fpm runs as
+  `www-data`, but a fresh clone and anything git writes land as `root`. Laravel
+  then cannot write its own log, so the failure is a 500 in nginx, a 500 in
+  php-fpm and an empty `storage/logs/`.
+- **The health check goes over plain HTTP, against `127.0.0.1`, with an explicit
+  `Host` header.** There is no `:443` listener to check against, and nginx serves
+  by name — without the header the request does not match the server block.
 - **The health check is the gate.** If `/up` never answers, the script exits
   non-zero and the Actions run goes red. It does not roll back for you.
 
@@ -536,7 +619,11 @@ provider snapshots) before you have real data.
 | CSS/JS 404 | assets were never built, or `public/build` is missing | `ls src/public/build/manifest.json`; re-run the npm step |
 | Old JS still served | browser or Cloudflare cache | Vite hashes filenames — purge Cloudflare, hard-reload |
 | `git reset` fails on the server | someone edited files in place | `git status`; commit it properly or `git checkout -- .` |
-| Certificate expired | renewal hook never reloaded nginx | `certbot renew --dry-run`; `docker exec marketing-ai-nginx nginx -s reload` |
+| nginx exits at boot, `open() "/etc/nginx/cloudflare/real-ip.conf" failed` | the refresher never ran, so the file the template includes does not exist | `/usr/local/sbin/cloudflare-ranges-refresh`, then `$C restart nginx` |
+| `ERR_TOO_MANY_REDIRECTS`, or 521/522 from Cloudflare | SSL/TLS mode is Full or Full (strict); the origin has no `:443` | Cloudflare → SSL/TLS → Overview → **Flexible** |
+| Every visitor logged with a Cloudflare IP | `real-ip.conf` is stale or empty | `head -3 /etc/nginx/cloudflare/real-ip.conf`; re-run the refresher |
+| The site 403s or times out for real users | UFW allowlist rebuilt from a bad fetch, or a new Cloudflare range | `ufw status \| grep -c 80/tcp` — expect ~20; re-run the refresher |
+| Deploys start timing out after weeks of working | fail2ban banned the Actions runner | `fail2ban-client status sshd`; `/usr/local/sbin/github-ranges-refresh` |
 | Deploy hangs on `npm ci` | out of memory | `free -h` — the swap file from step 6 is not optional |
 | Queue jobs run old code | `queue:restart` skipped | `$C restart queue` |
 | 502 on everything, `app` healthy | nginx cached the old address of the `app` container | `$C logs nginx` shows `connect() failed … upstream: fastcgi://172.18.0.x`; compare with `docker inspect`, then `$C restart nginx` |
@@ -561,7 +648,11 @@ Run through this once the app is live:
 - [ ] `.env.docker` and `src/.env` are not in git (`git status` shows nothing)
 - [ ] MySQL is bound to `127.0.0.1:3306`, not `0.0.0.0`
 - [ ] Grafana is bound to `127.0.0.1:3000`, reached only over an SSH tunnel
-- [ ] UFW allows only 22, 80, 443 (`ufw status`)
+- [ ] UFW allows 22 from anywhere and **80 only from Cloudflare's ranges** (`ufw status`)
+- [ ] **443 is closed** and nothing listens there (`ss -lntp | grep ':443'` prints nothing)
+- [ ] Cloudflare SSL/TLS mode is **Flexible** and both DNS records are proxied
+- [ ] `cloudflare-ranges-refresh.timer` and `github-ranges-refresh.timer` are enabled (`systemctl list-timers`)
+- [ ] The origin IP is not reachable on 80 from a non-Cloudflare address (`curl -sI http://VPS_IP -m 5` times out)
 - [ ] fail2ban is running (`systemctl status fail2ban`)
 - [ ] SSH is key-only: `PasswordAuthentication no` in `/etc/ssh/sshd_config`
 - [ ] Root login disabled once a sudo-capable deploy user exists

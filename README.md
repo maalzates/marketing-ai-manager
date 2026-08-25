@@ -33,7 +33,6 @@ to re-run; use `make start` for a plain resume.
 | Service | URL |
 |---|---|
 | Application | http://localhost |
-| Mailpit | http://localhost:8025 |
 | MySQL | `127.0.0.1:3307` |
 | Redis | `127.0.0.1:6380` |
 | Grafana (optional profile) | http://localhost:3000 — admin/admin |

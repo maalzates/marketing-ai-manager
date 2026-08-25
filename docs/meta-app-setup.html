@@ -18,7 +18,7 @@
     <div class="meta">
       <span><b>Consola</b> developers.facebook.com</span>
       <span><b>Tiempo</b> ~20 min</span>
-      <span><b>Etiquetas</b> en inglés, como las muestra la consola</span>
+      <span><b>Etiquetas</b> en español, como las muestra la consola</span>
     </div>
   </div>
 </header>
@@ -74,9 +74,10 @@
     <p>Se crea en <code>developers.facebook.com/apps/creation/</code> y el resto vive en el
        <b>App Dashboard</b> de esa app: <b>App settings</b> → <b>Basic</b> (partes 3),
        <b>Products</b> (partes 2 y 4), <b>App Roles</b> y <b>App Review</b> (parte 6).</p>
-    <p>Meta tiene dos clases de app: las de <b>caso de uso</b>, que traen permisos fijos, y las
-       de <b>tipo</b>, que se arman añadiendo <b>Products</b>. Esta app es de tipo
-       <b>Business</b> — la parte 1 explica por qué.</p>
+    <p>Ya no hay «tipos» de app que armar a mano: toda app nueva se define por sus
+       <b>casos de uso</b>, y cada caso de uso arrastra sus permisos, funciones y products.
+       Un caso de uso se puede añadir después; <b>quitar, nunca</b>. La parte 1 explica cuál
+       marcar y por qué solo uno.</p>
   </div>
 
 </div>
@@ -86,12 +87,25 @@
 <section id="p1">
 <div class="wrap">
   <h2><span class="n">1</span> Crear la app</h2>
+
+  <div class="card red">
+    <h4>Lo único de esta guía que no se puede deshacer</h4>
+    <p>La pantalla <b>Casos de uso</b> es irreversible. La documentación de Meta lo dice sin
+       matices: <b>«Use cases cannot be removed after you create your app.»</b> Se pueden
+       <em>añadir</em> más tarde desde el Dashboard; quitar uno, nunca. Un caso de uso de más
+       significa permisos y products que la app arrastra para siempre — y que App Review va a
+       preguntar por qué están ahí.</p>
+    <p>Nada queda fijado hasta que termines el asistente, así que marcar y desmarcar dentro de
+       esta pantalla es gratis. Salir con el caso equivocado, no.</p>
+  </div>
+
   <ol class="steps">
     <li>Entra en <code>developers.facebook.com/apps/creation/</code>.</li>
-    <li><b>App details</b>: rellena con la tabla → <b>Next</b>.</li>
-    <li><b>Use cases</b>: elige <b>Other</b> → <b>Next</b> → tipo de app <b>Business</b>.</li>
-    <li><b>Business portfolio</b>: <b>I don't want to connect a business portfolio yet</b> → <b>Next</b>.</li>
-    <li><b>Requirements</b> → <b>Next</b> → <b>Overview</b> → <b>Go to dashboard</b>.</li>
+    <li><b>Detalles de la app</b>: nombre y correo de contacto (tabla abajo) → <b>Siguiente</b>.</li>
+    <li><b>Casos de uso</b>: marca <b>solo</b> <b>Crear y administrar anuncios con la API de
+        marketing</b> → <b>Siguiente</b>.</li>
+    <li><b>Negocio</b>: portfolio — parte 1b.</li>
+    <li><b>Requisitos</b> → <b>Resumen</b> → crear la app.</li>
   </ol>
 
   <table>
@@ -102,60 +116,232 @@
     </tr></thead>
     <tbody>
       <tr>
-        <td rowspan="2">App details</td>
-        <td><b>App name</b></td>
+        <td rowspan="2">Detalles de la app</td>
+        <td><b>Nombre de la app</b></td>
         <td><code>Marketing AI Manager</code> — es el nombre que el usuario ve en el diálogo
             de login de Facebook.</td>
       </tr>
       <tr>
-        <td><b>App contact email</b></td>
+        <td><b>Correo de contacto</b></td>
         <td>Tu correo. Aquí llegan los avisos de Meta sobre la app.</td>
       </tr>
+    </tbody>
+  </table>
+
+  <figure class="shot">
+    <img src="assets/meta-02-casos-de-uso.png"
+         alt="Pantalla Casos de uso, filtro Destacados, sin nada marcado">
+    <figcaption><b>Casos de uso · filtro «Destacados (6)», nada marcado.</b> Los seis que
+      Meta enseña primero. El que necesitamos es el de arriba. Los otros cinco no: los
+      anuncios de instalación de apps son para promocionar una app móvil, Threads y los
+      juegos instantáneos no los toca este proyecto, WhatsApp exige portfolio comercial, y el
+      de <b>inicio de sesión con Facebook</b> es la trampa — es el Facebook Login de consumo,
+      no el <b>Facebook Login for Business</b> que usa esta aplicación.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <img src="assets/meta-03-marketing-api-marcado.png"
+         alt="Casos de uso con Marketing API marcado; dos opciones en gris">
+    <figcaption><b>Marcado «Crear y administrar anuncios con la API de marketing».</b> Abajo
+      a la izquierda aparece <b>1 caso de uso agregado</b>, y dos opciones se apagan solas:
+      <b>juego instantáneo</b> y <b>inicio de sesión con Facebook</b>. Meta lo explica en el
+      aviso del pie: <b>«Algunos casos de uso no se pueden combinar en la misma app.»</b> Que
+      el Login de consumo sea justo uno de los incompatibles confirma por dónde va esta app:
+      el camino de negocio, con Login for Business.</figcaption>
+  </figure>
+
+  <h3>Qué permisos trae este caso de uso</h3>
+  <p>Los tres que mueven anuncios, y son de los que <a href="#p6">App Review</a> pide
+     justificación:</p>
+  <table>
+    <thead><tr><th style="width:30%">Permiso</th><th>Para qué lo usa la aplicación</th></tr></thead>
+    <tbody>
+      <tr><td><code>ads_management</code></td><td>Crear y modificar campañas, conjuntos y anuncios.</td></tr>
+      <tr><td><code>ads_read</code></td><td>Leer métricas de rendimiento (Insights).</td></tr>
+      <tr><td><code>business_management</code></td><td>Ver y reclamar las cuentas publicitarias del portfolio.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="card green">
+    <h4>Verificado en pantalla: Instagram <em>sí</em> es compatible con Marketing API</h4>
+    <p>Una versión anterior de esta guía decía que marcar el caso de Marketing API dejaba los
+       casos de Instagram en gris, y por eso mandaba usar la opción <b>Otro</b>. <b>Es
+       falso.</b> Con Marketing API ya marcado, el filtro <b>Administración de contenido
+       (5)</b> muestra los cinco casos disponibles, ninguno apagado.</p>
+  </div>
+
+  <figure class="shot">
+    <img src="assets/meta-04-administracion-de-contenido.png"
+         alt="Filtro Administración de contenido con los cinco casos disponibles">
+    <figcaption><b>Filtro «Administración de contenido (5)», con Marketing API ya marcado.</b>
+      Los cinco están activos. Los dos que importan para este proyecto son <b>Administrar
+      mensajes y contenido en Instagram</b> y <b>Administrar todos los aspectos de tu
+      página</b>. <b>Todavía no marques ninguno</b> — la parte 2 explica cuál de los dos trae
+      los permisos que esta aplicación pide, y eso se decide mirando el Dashboard, no
+      adivinando.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <img src="assets/meta-05-otros.png"
+         alt="Filtro Otros: la opción Otro en gris y marcada como que va a desaparecer">
+    <figcaption><b>Filtro «Otros (5)».</b> Aquí muere el camino de la guía anterior: la opción
+      <b>Otro</b> — la que creaba la app «en la experiencia anterior», eligiendo permisos a
+      mano — sale en gris y con la etiqueta <b>This option is going away soon</b>. También
+      apagados: portabilidad de datos, ThreatExchange y <b>Crear una app sin un caso de
+      uso</b>. Ya no hay app «de tipo» que armar a mano: <b>toda app nueva se define por sus
+      casos de uso.</b></figcaption>
+  </figure>
+
+  <div class="card amber">
+    <h4>Lo que queda abierto al salir de esta pantalla</h4>
+    <p>La aplicación pide ocho permisos en un solo token
+       (<code>src/config/services.php</code>, clave <code>meta.scopes</code>). El caso de
+       Marketing API cubre tres. Los otros cinco —
+       <code>pages_show_list</code>, <code>pages_read_engagement</code>,
+       <code>instagram_basic</code>, <code>instagram_manage_insights</code>,
+       <code>instagram_content_publish</code> — vienen de un segundo caso de uso, y
+       <b>cuál</b> es lo que hay que comprobar en el Dashboard antes de añadirlo.</p>
+    <p>El detalle que decide: el caso <b>Administrar mensajes y contenido en Instagram</b>
+       puede venir con <b>Instagram Login</b> y sus permisos
+       <code>instagram_business_*</code>, que <b>no</b> son los que pide esta app. Y la
+       restricción de Meta es dura: <b>«Your app can either use Facebook Login or Instagram
+       Login but not both.»</b> Esta app usa <b>Facebook Login for Business</b>, así que el
+       segundo caso de uso tiene que ser el que exponga la familia
+       <code>instagram_basic</code>.</p>
+    <p>Por eso el asistente se termina con <b>un solo</b> caso de uso. Añadir el segundo desde
+       el Dashboard cuesta dos clicks y se hace <em>viendo</em> qué permisos trae. Marcarlo
+       ahora es firmar a ciegas algo que no se puede quitar.</p>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================== 1b -->
+<section id="p1b">
+<div class="wrap">
+  <h2><span class="n">1b</span> El portfolio comercial, y las tres identidades que no son la misma</h2>
+
+  <figure class="shot">
+    <img src="assets/meta-06-negocio-portfolio.png"
+         alt="Paso Negocio: ¿qué portfolio comercial quieres conectar a esta app?">
+    <figcaption><b>Paso «Negocio».</b> Selecciona el portfolio existente (aquí
+      <b>Manuel Alzate</b>) → <b>Siguiente</b>. Sin verificar está bien: la verificación solo
+      hace falta para <b>acceso avanzado</b>, es decir para servir a negocios que no son
+      tuyos. Se puede conectar más tarde, pero conectarlo ahora ahorra un paso y no cuesta
+      nada.</figcaption>
+  </figure>
+
+  <div class="card red">
+    <h4>No crees una segunda cuenta personal de Facebook. Nunca.</h4>
+    <p>La duda natural es: «la cuenta de Facebook con la que estoy creando la app no es la de
+       la cuenta de Instagram donde voy a publicar, ¿hago otra cuenta de Facebook?»
+       <b>No.</b> Meta prohíbe tener más de una cuenta personal, y cuando detecta duplicados
+       no se lleva solo la cuenta nueva: se lleva la app, el portfolio y la cuenta
+       publicitaria colgados de ella. Es exactamente el tipo de baneo que esta guía existe
+       para evitar.</p>
+    <p>Y no hace falta, porque <b>nada de esto requiere que las tres identidades coincidan</b>.</p>
+  </div>
+
+  <h3>Las tres identidades</h3>
+  <table>
+    <thead><tr>
+      <th style="width:22%">Qué es</th>
+      <th style="width:26%">En este caso</th>
+      <th>Para qué sirve</th>
+    </tr></thead>
+    <tbody>
       <tr>
-        <td>Use cases</td>
-        <td><b>Other</b></td>
-        <td>Al pulsar <b>Next</b> aparecen dos tipos: <b>Business</b> o <b>Consumer</b>.
-            Elige <b>Business</b>.</td>
+        <td><b>Cuenta de Facebook de developer</b></td>
+        <td>La que estás usando ahora</td>
+        <td>Es dueña de la app y firma el App Review. Vale cualquiera; no tiene que tener
+            relación con el Instagram donde se publica.</td>
       </tr>
       <tr>
-        <td>Business portfolio</td>
-        <td>Selector de portfolio</td>
-        <td><b>I don't want to connect a business portfolio yet</b>. Solo hace falta un
-            portfolio para acceder a datos que no son tuyos; se conecta después sin recrear
-            la app.</td>
+        <td><b>Portfolio comercial</b></td>
+        <td><code>Manuel Alzate</code></td>
+        <td>El contenedor de los activos: la <b>Página</b>, la <b>cuenta de Instagram</b> y la
+            <b>cuenta publicitaria</b>. Es aquí donde vive la relación, no en la cuenta
+            personal.</td>
+      </tr>
+      <tr>
+        <td><b>Cuenta de Instagram profesional</b></td>
+        <td>La cuenta nueva de contenido</td>
+        <td>La que publica. Tiene que ser <b>Business</b> o <b>Creator</b>, estar
+            <b>vinculada a una Página de Facebook</b>, y esa Página tiene que estar dentro del
+            portfolio.</td>
       </tr>
     </tbody>
   </table>
 
   <div class="card amber">
-    <h4>Por qué <b>Other</b> → <b>Business</b> y no un caso de uso de Marketing API</h4>
-    <p>La pantalla <b>Use cases</b> ofrece tres casos de Marketing API:</p>
-    <ul>
-      <li><b>Create &amp; manage ads with Marketing API</b> — crear y gestionar campañas.
-          Nada de Instagram orgánico.</li>
-      <li><b>Measure ad performance data with Marketing API</b> — solo lectura de métricas.</li>
-      <li><b>Capture &amp; manage ad leads with Marketing API</b> — formularios de leads. No aplica.</li>
-    </ul>
-    <p>El plausible es <b>Create &amp; manage ads with Marketing API</b>, y es el error: al
-       marcarlo, los casos de Instagram quedan <b>en gris</b> — son incompatibles — y esta
-       aplicación necesita las dos cosas en la misma app
-       (<code>ads_management</code> y <code>instagram_content_publish</code> viven en el
-       mismo token).</p>
-    <p><b>Other</b> → <b>Business</b> no tiene esa restricción. Meta lo describe así:</p>
-    <pre>Create or manage business assets like Pages, Events, Groups, Ads,
-Messenger, WhatsApp, and Instagram Graph API using the available
-business permissions, features, and products.</pre>
-    <p>Y es además obligatorio por otro lado: <b>Facebook Login for Business</b> — el flujo
-       OAuth que usa la aplicación — exige una app de tipo Business.</p>
+    <h4>Por qué la cuenta de Instagram tiene que estar en el portfolio, y no solo «vinculada»</h4>
+    <p>La aplicación no habla con Instagram directamente. Llama a
+       <code>GET /{page-id}?fields=instagram_business_account</code> y usa el
+       <code>{ig-user-id}</code> que devuelve. <b>Si la Página no tiene cuenta de Instagram
+       profesional vinculada, la clave <code>instagram_business_account</code> no viene
+       vacía: no viene.</b> No hay error, no hay <code>null</code> — simplemente no está, y
+       publicar es imposible.</p>
+    <p>Ese es también el motivo de que la app pida <code>ads_management</code> y
+       <code>business_management</code> para operaciones que parecen puramente orgánicas: la
+       documentación de Instagram repite en casi todas sus páginas <b>«plus
+       <code>ads_management</code> or <code>ads_read</code> if the app user was granted a role
+       on the Page via the Business Manager»</b>. Con la Página dentro de un portfolio, ese es
+       siempre el caso.</p>
   </div>
 
-  <div class="card amber">
-    <h4>Dos etiquetas sin verificar</h4>
-    <p>La documentación de Meta describe las dos primeras pantallas en prosa
-       («enter app name and contact email»), no cita los <em>labels</em>. <b>App name</b> y
-       <b>App contact email</b> están tomados de esa prosa y de <b>Basic Settings</b>, donde
-       el segundo aparece como <b>Contact Email</b>. Si la pantalla muestra otra cosa, es la
-       pantalla la que manda.</p>
+  <h3>Qué hay que dejar montado antes de conectar la cuenta en la aplicación</h3>
+  <ol class="steps">
+    <li>La cuenta de Instagram nueva, convertida a <b>cuenta profesional</b> (Business o
+        Creator) desde la propia app de Instagram.</li>
+    <li>Una <b>Página de Facebook</b> para ese proyecto, y la cuenta de Instagram vinculada a
+        ella.</li>
+    <li>En <b>Configuración del negocio</b> del portfolio <code>Manuel Alzate</code>: añadir
+        la <b>Página</b>, la <b>cuenta de Instagram</b> y la <b>cuenta publicitaria</b> como
+        activos, con tu usuario como <b>administrador</b> de las tres.</li>
+  </ol>
+
+  <div class="card blue">
+    <h4>En modo de desarrollo, quien conecta tiene que tener rol en la app</h4>
+    <p>Meta lo dice así: <b>«Apps in Development mode can only request permissions from role
+       users»</b> — administradores, desarrolladores y testers de la app. Como vas a conectar
+       con <b>la misma cuenta</b> que creó la app, ya cumples. Si algún día conecta otra
+       persona antes del App Review, hay que añadirla en <b>App Roles</b> primero, o el
+       diálogo de OAuth le negará los permisos sin explicar por qué.</p>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================== 1c -->
+<section id="p1c">
+<div class="wrap">
+  <h2><span class="n">1c</span> Requisitos y Resumen — qué comprobar antes de pulsar «Crear app»</h2>
+
+  <figure class="shot">
+    <img src="assets/meta-07-requisitos.png"
+         alt="Paso Requisitos: no se identificaron requisitos">
+    <figcaption><b>Paso «Requisitos».</b> Dice <b>«No se identificaron requisitos. Esto puede
+      cambiar si agregas más casos de uso a la app.»</b> Está vacío porque la app nace en
+      <b>modo de desarrollo</b> con acceso estándar: nada que revisar mientras solo la usen
+      los usuarios con rol en la app. Esta pantalla se vuelve a poblar cuando añadas el
+      segundo caso de uso o pidas acceso avanzado. → <b>Siguiente</b>.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <img src="assets/meta-08-resumen.png"
+         alt="Paso Resumen con un caso de uso, portfolio no verificado y sin requisitos">
+    <figcaption><b>Paso «Resumen».</b> Es la última pantalla en la que los casos de uso se
+      pueden cambiar. Cuatro cosas que tienen que leerse así, y si alguna no cuadra se vuelve
+      con <b>Anterior</b>: nombre y correo correctos · <b>un solo</b> caso de uso, <b>Crear y
+      administrar anuncios con la API de marketing</b> · el portfolio conectado, con
+      <b>Negocio no verificado</b> — normal · <b>No hay requisitos para los casos de uso en
+      esta app</b>. Entonces sí: <b>Crear app</b>.</figcaption>
+  </figure>
+
+  <div class="card green">
+    <h4>«Negocio no verificado» no es un problema todavía</h4>
+    <p>La verificación del negocio es el peaje del <b>acceso avanzado</b>, es decir el de
+       servir a cuentas publicitarias que no son tuyas. Con acceso estándar y en modo de
+       desarrollo la app opera sobre tus propios activos sin verificar nada. Se verifica
+       cuando haya un cliente de verdad, no ahora.</p>
   </div>
 </div>
 </section>

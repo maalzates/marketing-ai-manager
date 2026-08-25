@@ -28,7 +28,7 @@ marketing-ai-manager/
 
 ```
 browser / Meta's fetcher
-  → nginx (:80 dev, :443 prod)
+  → nginx (:80 dev, :80 prod behind Cloudflare)
       → /api/v1/*     → php-fpm → routes/api.php  → Controller → Service → Repository → Model
       → /api/health   → php-fpm → routes/api.php  → liveness probe, unversioned
       → /media/{token}→ php-fpm → routes/web.php  → signed stream from Drive
@@ -337,13 +337,12 @@ Neither file is in git. Every new variable must land in `src/.env.example` or
 | Service | Dev | Prod |
 |---|---|---|
 | `app` | php-fpm 8.4, code bind-mounted | same image, opcache on, timestamps frozen |
-| `nginx` | `:8080`, plain HTTP | `:80` → redirect, `:443` TLS from Let's Encrypt |
+| `nginx` | `:80` on the host (`HTTP_PORT` overrides), plain HTTP | `:80`, plain HTTP — TLS terminates at Cloudflare (Flexible); no `:443`, no certificate |
 | `db` | MySQL 8.4 on `:3307`; also holds `marketing_ai_testing` and the parallel `marketing_ai_testing_{a,b,c,d,main}` schemas | MySQL 8.4, bound to `127.0.0.1:3306` |
 | `redis` | `:6380` — cache, sessions, queue | internal only |
 | `node` | Vite dev server on `:5173` | not present; assets are prebuilt by `deploy.sh` |
 | `queue` | `queue:work` | `queue:work` with `--max-time=3600` |
 | `scheduler` | not present | `schedule:work` |
-| `mailpit` | `:8025` | not present |
 | `loki`/`promtail`/`grafana` | `observability` profile | `observability` profile, Grafana on loopback only |
 
 Production images are built from the same `Dockerfile`; only the mounted

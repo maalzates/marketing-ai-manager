@@ -47,11 +47,10 @@ If you find yourself wanting to put an Apify token or an `ANTHROPIC_API_KEY` in
 
 | Port | Service | Override with |
 |---|---|---|
-| 8080 | Application (nginx) | `HTTP_PORT` |
+| 80 | Application (nginx) | `HTTP_PORT` |
 | 5173 | Vite dev server | `VITE_PORT` |
 | 3307 | MySQL (host side; 3306 inside the network) | `MYSQL_PORT` |
 | 6380 | Redis (host side; 6379 inside the network) | `REDIS_PORT` |
-| 8025 | Mailpit | `MAILPIT_PORT` |
 | 3000 | Grafana — only with the `observability` compose profile | `GRAFANA_PORT` |
 
 MySQL and Redis are deliberately shifted off 3306/6379 so the stack does not
@@ -168,14 +167,17 @@ apply that file, so it exists even on a volume created before the file did.
 
 #### Mail
 
-Mailpit catches everything locally; nothing leaves the machine. Read it at
-<http://localhost:8025>.
+The application sends no mail: there is no `Mailable`, no `Mail::` call and no
+notification channel wired up. These variables exist only because
+`config/mail.php` always reads them, and `MAIL_MAILER=log` keeps that harmless —
+anything a future feature sends lands in `storage/logs/laravel.log` instead of
+leaving the machine. There is no local SMTP catcher in the stack.
 
 | Variable | Example | Scope |
 |---|---|---|
 | `MAIL_MAILER` | `log` | I |
 | `MAIL_SCHEME` | `null` | I |
-| `MAIL_HOST` | `127.0.0.1` — point it at `mailpit` and `MAIL_MAILER=smtp`, `MAIL_PORT=1025` to see mail in the UI | I |
+| `MAIL_HOST` | `127.0.0.1` — unused while `MAIL_MAILER=log` | I |
 | `MAIL_PORT` | `2525` | I |
 | `MAIL_USERNAME` | `null` | I |
 | `MAIL_PASSWORD` | `null` | I |
@@ -237,7 +239,7 @@ file is created and mostly auto-filled by `scripts/setup-production.sh`.
 
 | Variable | What it is | Where it comes from | Example | Scope |
 |---|---|---|---|---|
-| `APP_DOMAIN` | Public domain nginx serves; selects the Let's Encrypt certificate | you | `marketing.example.com` | P |
+| `APP_DOMAIN` | Public domain nginx serves by name, and the `Host` header `deploy.sh` uses for its health check. No certificate is selected: TLS terminates at Cloudflare | you | `marketing.example.com` | P |
 | `MYSQL_DATABASE` | Schema the container creates | you | `marketing_ai_production` | P |
 | `MYSQL_USER` | User the container creates — must equal `DB_USERNAME` in `src/.env` | you | `marketing_ai` | P |
 | `MYSQL_PASSWORD` | Its password — must equal `DB_PASSWORD` | `openssl rand -base64 32` | *(random)* | P |
@@ -251,7 +253,7 @@ Read by `docker-compose.yml` from the shell or a root `.env`. All have defaults.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `HTTP_PORT` · `VITE_PORT` · `MYSQL_PORT` · `REDIS_PORT` · `MAILPIT_PORT` · `GRAFANA_PORT` | 8080 · 5173 · 3307 · 6380 · 8025 · 3000 | Published host ports |
+| `HTTP_PORT` · `VITE_PORT` · `MYSQL_PORT` · `REDIS_PORT` · `GRAFANA_PORT` | 80 · 5173 · 3307 · 6380 · 3000 | Published host ports |
 | `UID` · `GID` | your own, exported by the Makefile | Makes `php-fpm` run as you so bind-mounted files stay writable from both sides |
 
 ---
@@ -580,12 +582,12 @@ make up
    `marketing_ai_testing` schema and granting it to `marketing_ai`. Idempotent,
    so it also fixes volumes created before that file existed.
 5. `composer install`.
-6. `docker compose up -d` — brings up `app`, `queue`, `nginx`, `node`, `mailpit`
+6. `docker compose up -d` — brings up `app`, `queue`, `nginx` and `node`
    alongside `db` and `redis`.
 7. Generates `APP_KEY` **only if** `src/.env` has no `APP_KEY=base64:` line.
 8. `php artisan migrate --force`.
 9. `php artisan storage:link` if the symlink is missing.
-10. Prints the three URLs.
+10. Prints the application URL.
 
 `make up` is safe to re-run: the build is cached, Composer is a no-op on an
 unchanged lock file, and migrations are idempotent. Use `make start` for a plain
@@ -638,12 +640,11 @@ Everything below must pass before you consider the environment working.
 | 2 | The API envelope | `curl -s http://localhost/api/health` | `{"result":{"status":"ok"},"errors":[]}` |
 | 3 | Laravel's own probe | `curl -s -o /dev/null -w '%{http_code}\n' http://localhost/up` | `200` |
 | 4 | The queue worker is up | `docker compose ps queue` | State `running` (it runs `php artisan queue:work --tries=3 --timeout=120`) |
-| 5 | Every container is up | `docker compose ps` | `app`, `queue`, `nginx`, `node`, `db`, `redis`, `mailpit` all running; `db` healthy |
+| 5 | Every container is up | `docker compose ps` | `app`, `queue`, `nginx`, `node`, `db`, `redis` all running; `db` healthy |
 | 6 | Migrations applied | `make artisan CMD="migrate:status"` | Every migration `Ran` |
 | 7 | Seeds applied | `docker compose exec -T db sh -c 'MYSQL_PWD=secret mysql -umarketing_ai marketing_ai -e "select name from roles"'` | `admin` and `user` |
 | 8 | The suite passes | `make test` | All green |
 | 9 | Vite is serving | `curl -s -o /dev/null -w '%{http_code}\n' http://localhost/@vite/client` | `200` — nginx proxies the dev server; `5173` is not published |
-| 10 | Mailpit is up | open <http://localhost:8025> | The Mailpit inbox |
 
 `GET /api/health` is deliberately unversioned — an infrastructure liveness probe
 must not move when the API version does. Every other endpoint is under
@@ -829,7 +830,7 @@ docker compose down -v && make up && make artisan CMD="db:seed"
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| A port is already allocated | Something else holds 8080/3307/6380/8025 | `HTTP_PORT=9000 make up` — and update `APP_URL` and the registered redirect URIs to match |
+| A port is already allocated | Something else holds 80/3307/6380 | `HTTP_PORT=9000 make up` — and update `APP_URL` and the registered redirect URIs to match |
 | Config changes have no effect | A cached config | `make artisan CMD="config:clear"` |
 | Jobs never run | The `queue` container is down | `docker compose ps queue`, then `docker compose up -d queue` and check `make logs` |
 | `make test` fails on a missing database | The testing schema is absent on an old volume | `make test` recreates it; if it persists, re-run `make up` |
