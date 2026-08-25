@@ -82,6 +82,13 @@ echo "==> Restarting workers"
 $COMPOSE exec -T app php artisan queue:restart
 $COMPOSE restart app queue scheduler
 
+#     nginx resolves `app` once, when it loads its config. Recreating the app container can
+#     hand it a different address on the compose network — the one nginx cached may even
+#     belong to the scheduler by then — and every request answers 502 with php-fpm perfectly
+#     healthy. Restarting nginx last is what makes it look the address up again.
+echo "==> Reloading nginx"
+$COMPOSE restart nginx
+
 # 10. Smoke test through nginx. Plain HTTP on purpose: TLS terminates at Cloudflare, so
 #    this origin has no 443 listener and no certificate to check against.
 echo "==> Health check"

@@ -535,9 +535,12 @@
         vuelve a hornear los valores antiguos.</li>
     <li><b>Reinicia los workers</b> — <code>queue:work</code> mantiene el código viejo en
         memoria mientras viva el proceso.</li>
+    <li><b>nginx, el último</b> — <code>restart nginx</code>. Resuelve <code>app</code> una sola
+        vez, al cargar su configuración; si el contenedor vuelve con otra dirección, todo
+        responde 502 con php-fpm perfectamente sano.</li>
     <li><b>Health check</b> — <code>curl https://APP_DOMAIN/up</code>, diez intentos. Si no
         responde, el job termina en rojo.</li>
-  </ol>
+</ol>
 
   <p>Un servidor nuevo se prepara una sola vez con <code>scripts/setup-production.sh</code>.
      Detalle completo —DNS, TLS, secretos de Actions, rollback, backups— en

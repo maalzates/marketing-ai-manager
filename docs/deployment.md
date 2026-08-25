@@ -404,7 +404,7 @@ commit hash. You can also trigger it by hand: Actions → *Deploy to production*
 6. php artisan migrate --force
 7. php artisan db:seed --force               ← roles + knowledge entries, idempotent
 8. optimize:clear, then config:cache / route:cache / view:cache / event:cache
-9. queue:restart + restart the queue and scheduler containers
+9. queue:restart + restart app, queue, scheduler — then nginx, last
 10. curl https://APP_DOMAIN/up  ×10 with backoff  → non-zero exit if it never answers
 ```
 
@@ -418,6 +418,10 @@ Points worth understanding:
   without its guides. Every seeder is `firstOrCreate`, so re-running costs nothing.
 - **Caches are cleared before being rebuilt.** `config:cache` on top of a stale
   cache reads the old values and bakes them in again.
+- **nginx is restarted last, and that is not cosmetic.** It resolves `app` once, when
+  it loads its config. A recreated app container can come back on a different address
+  — the one nginx cached may by then belong to the scheduler — and every request
+  answers 502 with php-fpm perfectly healthy and nothing wrong in its log.
 - **Workers must be restarted.** `queue:work` holds the old code in memory for
   the life of the process; without `queue:restart` a deploy ships new code to the
   web tier and old code to the queue tier.
@@ -535,6 +539,7 @@ provider snapshots) before you have real data.
 | Certificate expired | renewal hook never reloaded nginx | `certbot renew --dry-run`; `docker exec marketing-ai-nginx nginx -s reload` |
 | Deploy hangs on `npm ci` | out of memory | `free -h` — the swap file from step 6 is not optional |
 | Queue jobs run old code | `queue:restart` skipped | `$C restart queue` |
+| 502 on everything, `app` healthy | nginx cached the old address of the `app` container | `$C logs nginx` shows `connect() failed … upstream: fastcgi://172.18.0.x`; compare with `docker inspect`, then `$C restart nginx` |
 | Google: "Missing required parameter: client_id" | `GOOGLE_CLIENT_ID` empty in `src/.env` on the server | `curl -s https://YOUR_DOMAIN/api/v1/auth/google/redirect` — an empty `client_id=` in the URL says it; fill it, then `$C exec app php artisan config:cache` |
 | Google: `redirect_uri_mismatch` | the console does not have the URI the app derives from `APP_URL` | Compare the `redirect_uri` in that same URL against the console's authorised list |
 
