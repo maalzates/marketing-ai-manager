@@ -95,7 +95,7 @@ src/          the Laravel application (app/Modules/, resources/js/, routes/, tes
 docker/       nginx, php.ini, mysql init, observability configs
 scripts/      deploy.sh, setup-production.sh
 spec/         one folder per unit of work (see CLAUDE.md)
-docs/         deployment guide + the three visual canvases
+docs/         deployment guide; personal-docs/ is local-only, never versioned
 .ai/          binding standards for AI agents (architecture, backend, tests)
 SETUP.md      empty machine → working application
 ```
@@ -148,6 +148,10 @@ ranges weekly for both nginx and the firewall, the other refreshes GitHub Action
 ranges daily so fail2ban never bans the runner that deploys. Without the second one,
 deploys start failing weeks later with nothing in the CI log to explain it.
 
+**To get into the running server**, see `SERVER-ACCESS.md` in the repository root —
+host, the two compose flags production needs, and the day-to-day commands. It is
+gitignored on purpose: the origin IP is the one thing Cloudflare hides.
+
 Setting up a new server, the environment files, GitHub secrets, rollback, backups and
 troubleshooting are in [`docs/deployment.md`](./docs/deployment.md). What was actually
 run on the production box is recorded in
@@ -157,18 +161,32 @@ run on the production box is recorded in
 
 Three self-contained HTML canvases, kept current as the last step of every change:
 
-- [`docs/project-map.html`](./docs/project-map.html) — repo layout, the modules,
+- [`docs/personal-docs/project-map.html`](./docs/personal-docs/project-map.html) — repo layout, the modules,
   stack, container topology for dev and production, ports, environment files, the
   deploy path, the make targets.
-- [`docs/system-flows.html`](./docs/system-flows.html) — the doors into the
+- [`docs/personal-docs/system-flows.html`](./docs/personal-docs/system-flows.html) — the doors into the
   application, the layers, a request end to end, errors and logging, outbound
   API calls and credentials, the proposal/approval invariant, account
   isolation, testing, and how work gets done.
-- [`docs/google-cloud-setup.html`](./docs/google-cloud-setup.html) — the operator
+- [`docs/personal-docs/google-cloud-setup.html`](./docs/personal-docs/google-cloud-setup.html) — the operator
   walkthrough for Google Cloud Console: the console path, the exact redirect
   URIs and scopes, and why the consent screen must be published to Production.
+- [`docs/personal-docs/meta-conceptos.html`](./docs/personal-docs/meta-conceptos.html) — what each Meta
+  entity is and how they relate: personal account, business portfolio, Page,
+  Instagram professional account, ad account, app and user token.
+- [`docs/personal-docs/meta-setup-plataforma.html`](./docs/personal-docs/meta-setup-plataforma.html) — done
+  **once, by whoever owns the app**: create the Meta app, pick the two use cases,
+  the eight permissions, the redirect URI, `META_APP_ID` / `META_APP_SECRET`.
+- [`docs/personal-docs/meta-setup-usuario.html`](./docs/personal-docs/meta-setup-usuario.html) — done **once
+  per user**: link a professional Instagram account to a Page, put both plus an
+  ad account in a portfolio, and what another account needs in order to connect.
+- [`docs/personal-docs/user-credentials-setup.html`](./docs/personal-docs/user-credentials-setup.html) — the
+  credentials a user enters inside the application: the Apify token and the LLM
+  API keys, per account and encrypted.
 
 Open them straight from the filesystem; no build step, no dependencies.
+**They are not in git.** `docs/personal-docs/` is ignored on purpose — the operator
+guides name real accounts, portfolios and billing details.
 
 ## Backend architecture
 

@@ -3,3 +3,7 @@
 .env.docker
 /.idea
 /.vscode
+SERVER-ACCESS.md
+
+# Operator guides and canvases: name real accounts, portfolios and billing
+docs/personal-docs/

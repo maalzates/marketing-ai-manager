@@ -388,9 +388,9 @@ and QA findings are resolved — the main thread runs one doc-sync pass:
 3. **Re-read the two canvases and make them true again.** They are documentation,
    not decoration, and they are the last thing anyone reads before touching this
    project:
-   - [`docs/project-map.html`](./docs/project-map.html) — repo layout, stack,
+   - [`docs/personal-docs/project-map.html`](./docs/personal-docs/project-map.html) — repo layout, stack,
      container topology, ports, env files, deploy path, the make targets.
-   - [`docs/system-flows.html`](./docs/system-flows.html) — the doors, the layers,
+   - [`docs/personal-docs/system-flows.html`](./docs/personal-docs/system-flows.html) — the doors, the layers,
      a request end to end, errors and logging, outbound calls and credentials,
      the proposal/approval invariant, account isolation, testing, the workflow.
 

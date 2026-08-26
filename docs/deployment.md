@@ -4,8 +4,14 @@ Everything needed to take this repo from "clean checkout" to "running on a VPS
 with automatic deploys on every push to `main`".
 
 Read this once end to end before touching a server. The steps are ordered
-because they depend on each other — DNS before TLS, TLS before nginx, nginx
-before the first deploy.
+because they depend on each other — DNS and Cloudflare before nginx, nginx before
+the first deploy.
+
+> **¿Solo necesitas entrar al servidor que ya está en marcha?**
+> El host, el usuario y los comandos del día a día están en
+> [`SERVER-ACCESS.md`](../SERVER-ACCESS.md), en la raíz del repositorio.
+> Ese fichero **no está en git**: la IP del origen es lo único que Cloudflare
+> oculta y no se publica. Esta guía usa `root@YOUR_SERVER_IP` en su lugar.
 
 ---
 

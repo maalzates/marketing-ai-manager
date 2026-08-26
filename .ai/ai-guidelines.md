@@ -15,8 +15,8 @@ is everything else. Nothing is mirrored — each fact has one home.
 | [`.ai/test-guidelines.md`](./test-guidelines.md) | How tests are written and run |
 | [`../CLAUDE.md`](../CLAUDE.md) | Spec-driven workflow, phases, agent roles, doc sync |
 | `marketing-backend-ddd` skill | Code templates for every backend layer |
-| [`../docs/project-map.html`](../docs/project-map.html) | Visual: repo layout, stack, containers, deploy path |
-| [`../docs/system-flows.html`](../docs/system-flows.html) | Visual: the core flows and what the app can do |
+| [`../docs/personal-docs/project-map.html`](../docs/personal-docs/project-map.html) | Visual: repo layout, stack, containers, deploy path |
+| [`../docs/personal-docs/system-flows.html`](../docs/personal-docs/system-flows.html) | Visual: the core flows and what the app can do |
 | [`../docs/deployment.md`](../docs/deployment.md) | Server setup and deployment |
 
 The two HTML canvases are part of the documentation, not decoration. They are
