@@ -37,7 +37,9 @@ onMounted(async () => {
         return;
     }
 
-    if (onboarding.isFinished) {
+    // An explicit `?step=` is a request to reopen that step, so finishing the wizard once
+    // must not bounce the user out of it — that made the checklist's links dead ends.
+    if (onboarding.isFinished && !route.query.step) {
         router.replace({ name: 'strategies' });
     }
 });
