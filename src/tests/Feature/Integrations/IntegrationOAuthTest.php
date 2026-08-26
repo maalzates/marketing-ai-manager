@@ -84,12 +84,15 @@ class IntegrationOAuthTest extends TestCase
         );
 
         $this->betweenRequests();
-        $this->getJson("/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7&state={$state}")
-            ->assertOk()
-            ->assertJsonPath('result.status', IntegrationStatus::CONNECTED->value)
-            ->assertJsonPath('result.external_account_id', '110248495921238986420');
+        $this->get("/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7&state={$state}")
+            ->assertRedirect('/settings?integration=google&status=connected');
 
-        $this->assertDatabaseHas('integrations', ['account_id' => $this->account->id, 'provider' => 'google']);
+        $this->assertDatabaseHas('integrations', [
+            'account_id' => $this->account->id,
+            'provider' => 'google',
+            'status' => IntegrationStatus::CONNECTED->value,
+            'external_account_id' => '110248495921238986420',
+        ]);
     }
 
     public function test_the_completed_callback_never_returns_the_token_it_stored(): void
@@ -101,10 +104,12 @@ class IntegrationOAuthTest extends TestCase
         );
 
         $this->betweenRequests();
-        $response = $this->getJson("/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7&state={$state}")->assertOk();
+        $response = $this->get("/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7&state={$state}");
 
-        $this->assertStringNotContainsString('ya29.a0AfB_byC3nQ7xK1mR9tPwLdX2vHgY8sZq', $response->getContent());
-        $this->assertStringNotContainsString('1//0gK8sLpQ3vXmZCgYIARAAGBASNwF-L9Ir', $response->getContent());
+        $landing = $response->headers->get('Location').$response->getContent();
+
+        $this->assertStringNotContainsString('ya29.a0AfB_byC3nQ7xK1mR9tPwLdX2vHgY8sZq', $landing);
+        $this->assertStringNotContainsString('1//0gK8sLpQ3vXmZCgYIARAAGBASNwF-L9Ir', $landing);
     }
 
     public function test_the_stored_grant_is_encrypted_at_rest(): void
@@ -116,7 +121,8 @@ class IntegrationOAuthTest extends TestCase
         );
 
         $this->betweenRequests();
-        $this->getJson("/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7&state={$state}")->assertOk();
+        $this->get("/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7&state={$state}")
+            ->assertRedirect('/settings?integration=google&status=connected');
 
         $stored = (string) DB::table('integrations')->where('account_id', $this->account->id)->value('credentials');
 
@@ -125,9 +131,8 @@ class IntegrationOAuthTest extends TestCase
 
     public function test_a_callback_without_a_state_is_refused(): void
     {
-        $this->getJson('/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7')
-            ->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
-            ->assertJsonPath('errors.message', 'La autorización no se pudo correlacionar. Vuelve a iniciarla desde Integraciones.');
+        $this->get('/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7')
+            ->assertRedirect('/settings?'.http_build_query(['status' => 'error', 'message' => 'La autorización no se pudo correlacionar. Vuelve a iniciarla desde Integraciones.']));
 
         $this->assertSame(0, $this->transport->requestCount());
         $this->assertDatabaseCount('integrations', 0);
@@ -137,9 +142,8 @@ class IntegrationOAuthTest extends TestCase
     {
         $forged = base64_encode('{"account_id":1,"provider":"google","nonce":"whatever"}').'.deadbeef';
 
-        $this->getJson("/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7&state={$forged}")
-            ->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
-            ->assertJsonPath('errors.message', 'La autorización no se pudo correlacionar. Vuelve a iniciarla desde Integraciones.');
+        $this->get("/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7&state={$forged}")
+            ->assertRedirect('/settings?'.http_build_query(['status' => 'error', 'message' => 'La autorización no se pudo correlacionar. Vuelve a iniciarla desde Integraciones.']));
 
         $this->assertSame(0, $this->transport->requestCount());
         $this->assertDatabaseCount('integrations', 0);
@@ -154,12 +158,12 @@ class IntegrationOAuthTest extends TestCase
         );
 
         $this->betweenRequests();
-        $this->getJson("/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7&state={$state}")->assertOk();
+        $this->get("/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7&state={$state}")
+            ->assertRedirect('/settings?integration=google&status=connected');
 
         $this->betweenRequests();
-        $this->getJson("/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7&state={$state}")
-            ->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
-            ->assertJsonPath('errors.message', 'La autorización no se pudo correlacionar. Vuelve a iniciarla desde Integraciones.');
+        $this->get("/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7&state={$state}")
+            ->assertRedirect('/settings?'.http_build_query(['status' => 'error', 'message' => 'La autorización no se pudo correlacionar. Vuelve a iniciarla desde Integraciones.']));
     }
 
     public function test_a_state_issued_for_one_provider_cannot_complete_another(): void
@@ -167,9 +171,8 @@ class IntegrationOAuthTest extends TestCase
         $state = $this->issuedState();
 
         $this->betweenRequests();
-        $this->getJson("/api/v1/integrations/meta/oauth/callback?code=4/0AY0e-g7&state={$state}")
-            ->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
-            ->assertJsonPath('errors.message', 'La autorización no se pudo correlacionar. Vuelve a iniciarla desde Integraciones.');
+        $this->get("/api/v1/integrations/meta/oauth/callback?code=4/0AY0e-g7&state={$state}")
+            ->assertRedirect('/settings?'.http_build_query(['status' => 'error', 'message' => 'La autorización no se pudo correlacionar. Vuelve a iniciarla desde Integraciones.']));
 
         $this->assertSame(0, $this->transport->requestCount());
         $this->assertDatabaseCount('integrations', 0);
@@ -180,9 +183,8 @@ class IntegrationOAuthTest extends TestCase
         $state = $this->issuedState();
 
         $this->betweenRequests();
-        $this->getJson("/api/v1/integrations/google/oauth/callback?error=access_denied&state={$state}")
-            ->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
-            ->assertJsonPath('errors.message', 'No autorizaste el acceso a Google. La conexión no se guardó.');
+        $this->get("/api/v1/integrations/google/oauth/callback?error=access_denied&state={$state}")
+            ->assertRedirect('/settings?'.http_build_query(['status' => 'error', 'message' => 'No autorizaste el acceso a Google. La conexión no se guardó.']));
 
         $this->assertSame(0, $this->transport->requestCount());
         $this->assertDatabaseCount('integrations', 0);
@@ -195,9 +197,8 @@ class IntegrationOAuthTest extends TestCase
         $this->transport->queue(FakeTransport::json(self::TOKEN_BODY_WITHOUT_REFRESH));
 
         $this->betweenRequests();
-        $this->getJson("/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7&state={$state}")
-            ->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
-            ->assertJsonPath('errors.message', 'Google no devolvió un permiso permanente. Revoca el acceso de la aplicación en tu cuenta de Google y vuelve a autorizarla.');
+        $this->get("/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7&state={$state}")
+            ->assertRedirect('/settings?'.http_build_query(['status' => 'error', 'message' => 'Google no devolvió un permiso permanente. Revoca el acceso de la aplicación en tu cuenta de Google y vuelve a autorizarla.']));
 
         $this->assertDatabaseCount('integrations', 0);
     }
@@ -213,7 +214,8 @@ class IntegrationOAuthTest extends TestCase
         );
 
         $this->betweenRequests();
-        $this->getJson("/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7&state={$state}")->assertOk();
+        $this->get("/api/v1/integrations/google/oauth/callback?code=4/0AY0e-g7&state={$state}")
+            ->assertRedirect('/settings?integration=google&status=connected');
 
         $this->assertDatabaseHas('integrations', ['account_id' => $this->account->id, 'provider' => 'google']);
         $this->assertDatabaseMissing('integrations', ['account_id' => $other->id, 'provider' => 'google']);

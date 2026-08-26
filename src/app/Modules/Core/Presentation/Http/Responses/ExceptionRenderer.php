@@ -42,8 +42,26 @@ readonly class ExceptionRenderer
             : null;
     }
 
+    /**
+     * The OAuth callback lives under `/api` but answers a browser mid-navigation, so a failed
+     * connection must land the user back in the application instead of on a JSON error page.
+     * It is handled before the `api/*` branch precisely because that branch would win.
+     */
+    private function renderOAuthCallback(Throwable $exception): SymfonyResponse
+    {
+        return OAuthCallbackRedirect::failed(match (true) {
+            $exception instanceof ClientException => $exception->getClientMessage(),
+            $exception instanceof ApiException => $exception->getMessage(),
+            default => 'No se pudo completar la conexión. Vuelve a intentarlo.',
+        });
+    }
+
     public function render(Throwable $exception, Request $request): ?SymfonyResponse
     {
+        if ($request->routeIs('integrations.oauth.callback')) {
+            return $this->renderOAuthCallback($exception);
+        }
+
         if (! $request->is('api/*') && ! $request->expectsJson()) {
             return $this->renderOutsideTheApi($exception);
         }

@@ -1,11 +1,16 @@
 <script setup>
 import { onMounted, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import ErrorState from '@/components/ErrorState.vue';
 import FormField from '@/components/FormField.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import { useIntegrationsStore } from '@/stores/integrations';
 import { useSettingsStore } from '@/stores/settings';
+import { useUiStore } from '@/stores/ui';
 
+const route = useRoute();
+const router = useRouter();
+const ui = useUiStore();
 const settings = useSettingsStore();
 const integrations = useIntegrationsStore();
 
@@ -46,7 +51,24 @@ const form = reactive({
 onMounted(() => {
     settings.fetchAll();
     integrations.fetchAll();
+    announceOauthResult();
 });
+
+// The OAuth callback redirects here with the outcome in the query, because the provider
+// sends the browser to the API and only the SPA can tell the user how it went.
+function announceOauthResult() {
+    const { status, integration, message } = route.query;
+
+    if (!status) {
+        return;
+    }
+
+    status === 'connected'
+        ? ui.success(`Conexión con ${integration} completada.`)
+        : ui.error(message || 'No se pudo completar la conexión.');
+
+    router.replace({ name: 'settings' });
+}
 
 watch(() => settings.values, (values) => Object.assign(form, values ?? {}));
 
