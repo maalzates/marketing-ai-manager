@@ -6,6 +6,7 @@ import {
     oauthRedirectUrl,
     saveIntegration,
     verifyIntegration,
+    refreshModelCatalog,
 } from '@/repositories/integrationsRepository';
 import { useAsyncState } from '@/stores/useAsyncState';
 
@@ -44,6 +45,18 @@ export const useIntegrationsStore = defineStore('integrations', () => {
         await fetchAll();
     }
 
+    // Asks each connected provider which models this account can call. The list is cached, so
+    // without this the catalogue only moves when the nightly job runs.
+    async function refreshModels() {
+        const result = await run(refreshModelCatalog, 'Catálogo de modelos actualizado.');
+
+        if (result) {
+            await fetchAll();
+        }
+
+        return Boolean(result);
+    }
+
     async function connectWithOauth(provider) {
         const result = await run(() => oauthRedirectUrl(provider));
 
@@ -64,5 +77,6 @@ export const useIntegrationsStore = defineStore('integrations', () => {
         verify,
         disconnect,
         connectWithOauth,
+        refreshModels,
     };
 });

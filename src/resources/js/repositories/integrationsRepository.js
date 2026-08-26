@@ -19,3 +19,7 @@ export async function verifyIntegration(provider) {
 export async function oauthRedirectUrl(provider) {
     return (await http.get(`/integrations/${provider}/oauth/redirect`)).data.result;
 }
+
+export async function refreshModelCatalog() {
+    return (await http.post('/ai/models/refresh')).data.result;
+}

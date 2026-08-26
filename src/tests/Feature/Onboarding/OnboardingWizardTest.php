@@ -6,6 +6,7 @@ namespace Tests\Feature\Onboarding;
 
 use App\Models\User;
 use App\Modules\Accounts\Infrastructure\Persistence\Account;
+use App\Modules\Ai\Domain\Enums\LlmProvider;
 use App\Modules\Integrations\Domain\Enums\IntegrationStatus;
 use App\Modules\Integrations\Infrastructure\Persistence\Integration;
 use Carbon\CarbonImmutable;
@@ -22,6 +23,8 @@ use Tests\TestCase;
 class OnboardingWizardTest extends TestCase
 {
     use RefreshDatabase;
+
+    private const string OPENAI_MODELS_BODY = '{"object":"list","data":[{"id":"gpt-5.6-sol","object":"model","owned_by":"openai"}]}';
 
     private const string ANTHROPIC_MODELS_BODY = '{"data":[{"type":"model","id":"claude-opus-5","display_name":"Claude Opus 5","created_at":"2026-05-14T00:00:00Z"}],"has_more":false}';
 
@@ -76,6 +79,24 @@ class OnboardingWizardTest extends TestCase
             ->assertJsonPath('result.steps.0.status', 'completed');
 
         $this->assertSame(1, $this->transport->requestCount());
+    }
+
+    /**
+     * The registry defaults every task to Anthropic. Connecting OpenAI has to move them, or
+     * the first AI call tells the user to connect a provider they never chose.
+     */
+    public function test_completing_the_llm_step_routes_every_task_to_the_connected_provider(): void
+    {
+        Integration::factory()->openAi()->for($this->account)->disconnected()->create();
+        $this->transport->queue(FakeTransport::json(self::OPENAI_MODELS_BODY));
+
+        $this->postJson('/api/v1/onboarding/steps/llm/complete', ['provider' => 'openai'])->assertOk();
+
+        $models = $this->getJson('/api/v1/settings')->assertOk()->json('result');
+
+        $this->assertSame(LlmProvider::OpenAi->capableModel(), $models['ai.models.per_task.chat']['value']);
+        $this->assertSame(LlmProvider::OpenAi->cheapestModel(), $models['ai.models.per_task.field_suggestion']['value']);
+        $this->assertSame('account', $models['ai.models.per_task.chat']['scope']);
     }
 
     /** A key that is merely stored is not a connection: the tick has to survive a real call. */

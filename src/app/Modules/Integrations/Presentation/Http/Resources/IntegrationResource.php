@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Integrations\Presentation\Http\Resources;
 
+use App\Modules\Core\Application\Context\AccountContext;
+use App\Modules\Integrations\Domain\Contracts\LlmModelCatalogInterface;
 use App\Modules\Integrations\Infrastructure\Persistence\Integration;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -31,6 +33,14 @@ class IntegrationResource extends JsonResource
             'expires_at' => $this->expires_at?->toIso8601String(),
             'last_checked_at' => $this->last_checked_at?->toIso8601String(),
             'failure_count' => $this->failure_count,
+            // The models this provider offers, so Settings → Models can offer a list instead
+            // of a text field. Resolved here rather than injected because a resource collection
+            // has nowhere to take a constructor argument.
+            'models' => app(LlmModelCatalogInterface::class)->forProvider(
+                $this->provider,
+                app(AccountContext::class)->accountId,
+            ),
+            'pricing_url' => app(LlmModelCatalogInterface::class)->pricingUrlFor($this->provider),
         ];
     }
 

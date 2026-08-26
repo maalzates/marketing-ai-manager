@@ -156,6 +156,15 @@ readonly class IntegrationRepository implements IntegrationRepositoryInterface
             ->pluck('account_id');
     }
 
+    public function accountIdsConnectedTo(array $providers): Collection
+    {
+        return $this->model->newQuery()
+            ->whereIn('provider', array_map(static fn (IntegrationProvider $provider): string => $provider->value, $providers))
+            ->where('status', IntegrationStatus::CONNECTED->value)
+            ->distinct()
+            ->pluck('account_id');
+    }
+
     private function upsert(int $accountId, IntegrationProvider $provider, array $attributes): Integration
     {
         return $this->model->newQuery()->updateOrCreate(

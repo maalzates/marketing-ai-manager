@@ -2,28 +2,41 @@
 import { computed } from 'vue';
 import { RouterLink, RouterView } from 'vue-router';
 import ConfigChecklist from '@/components/ConfigChecklist.vue';
+import NavIcon from '@/components/NavIcon.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
 
 const auth = useAuthStore();
 const ui = useUiStore();
 
-const links = [
-    { name: 'dashboard', label: 'Dashboard' },
-    { name: 'strategies', label: 'Estrategias' },
-    { name: 'experiments', label: 'Experimentos' },
-    { name: 'proposals', label: 'Propuestas' },
-    { name: 'content-planner', label: 'Contenido' },
-    { name: 'competitors', label: 'Competencia' },
-    { name: 'assets', label: 'Biblioteca' },
-    { name: 'chat', label: 'Chat' },
-    { name: 'reports', label: 'Reportes' },
-    { name: 'settings', label: 'Configuración' },
+const primary = [
+    { name: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
 ];
 
-const visibleLinks = computed(() => (
-    auth.isAdmin ? [...links, { name: 'admin-users', label: 'Admin' }] : links
-));
+const work = [
+    { name: 'strategies', label: 'Estrategias', icon: 'strategies' },
+    { name: 'experiments', label: 'Experimentos', icon: 'experiments' },
+    { name: 'proposals', label: 'Propuestas', icon: 'proposals' },
+    { name: 'content-planner', label: 'Contenido', icon: 'content' },
+    { name: 'competitors', label: 'Competencia', icon: 'competitors' },
+    { name: 'assets', label: 'Biblioteca', icon: 'assets' },
+    { name: 'chat', label: 'Chat', icon: 'chat' },
+    { name: 'reports', label: 'Reportes', icon: 'reports' },
+];
+
+const account = computed(() => {
+    const entries = [{ name: 'settings', label: 'Configuración', icon: 'settings' }];
+
+    return auth.isAdmin
+        ? [...entries, { name: 'admin-users', label: 'Admin', icon: 'admin' }]
+        : entries;
+});
+
+const groups = computed(() => [
+    { key: 'primary', title: null, links: primary },
+    { key: 'work', title: 'Trabajo', links: work },
+    { key: 'account', title: 'Cuenta', links: account.value },
+]);
 </script>
 
 <template>
@@ -38,17 +51,43 @@ const visibleLinks = computed(() => (
 
         <div class="flex min-h-screen">
             <aside class="hidden w-60 shrink-0 border-r border-line bg-surface lg:block">
-                <div class="px-5 py-5 text-sm font-semibold">Marketing AI Manager</div>
-                <nav class="flex flex-col gap-1 px-3 pb-6">
-                    <RouterLink
-                        v-for="link in visibleLinks"
-                        :key="link.name"
-                        :to="{ name: link.name }"
-                        class="rounded-lg px-3 py-2 text-sm text-muted hover:bg-canvas hover:text-ink"
-                        active-class="bg-brand-50 text-brand-700"
+                <div class="flex items-center gap-2.5 border-b border-line px-4 py-4">
+                    <span
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-brand-500 to-brand-700 text-[15px] font-bold text-white"
+                        aria-hidden="true"
                     >
-                        {{ link.label }}
-                    </RouterLink>
+                        M
+                    </span>
+                    <span class="min-w-0">
+                        <span class="block truncate text-[15px] font-semibold leading-tight">Mazze Flow</span>
+                        <span class="block truncate text-[11px] leading-tight text-muted">Marketing AI Manager</span>
+                    </span>
+                </div>
+
+                <nav class="flex flex-col gap-5 px-3 py-4 pb-6">
+                    <div v-for="group in groups" :key="group.key" class="flex flex-col gap-0.5">
+                        <p
+                            v-if="group.title"
+                            class="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted/70"
+                        >
+                            {{ group.title }}
+                        </p>
+
+                        <RouterLink
+                            v-for="link in group.links"
+                            :key="link.name"
+                            :to="{ name: link.name }"
+                            class="group relative flex items-center gap-2.5 rounded-lg py-2 pl-3 pr-3 text-sm text-muted transition-colors hover:bg-canvas hover:text-ink"
+                            active-class="is-active !bg-brand-50 font-medium !text-brand-700"
+                        >
+                            <span
+                                class="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-brand-500 opacity-0 transition-opacity group-[.is-active]:opacity-100"
+                                aria-hidden="true"
+                            />
+                            <NavIcon :name="link.icon" class="opacity-70 transition-opacity group-hover:opacity-100 group-[.is-active]:opacity-100" />
+                            {{ link.label }}
+                        </RouterLink>
+                    </div>
                 </nav>
             </aside>
 

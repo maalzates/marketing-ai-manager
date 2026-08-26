@@ -122,7 +122,12 @@ return [
         // input_tokens EXCLUDES cached tokens on this provider: total input is
         // input_tokens + cache_read_input_tokens + cache_creation_input_tokens.
         'cached_tokens_are_additive' => true,
+        // No provider serves prices over the API, so this is the tariff and the ledger bills
+        // from it. A model the provider lists and this table does not is still callable — it
+        // simply records a cost of zero, which is why the pricing page is one click away.
+        'pricing_url' => 'https://www.anthropic.com/pricing#api',
         'models' => [
+            'claude-3-5-haiku-latest' => ['input' => 0.80, 'output' => 4.00],
             'claude-haiku-4-5' => ['input' => 1.00, 'output' => 5.00],
             'claude-sonnet-5' => ['input' => 3.00, 'output' => 15.00],
             'claude-opus-5' => ['input' => 5.00, 'output' => 25.00],
@@ -134,8 +139,14 @@ return [
         'key_prefixes' => ['sk-proj-', 'sk-svcacct-', 'sk-'],
         // prompt_tokens ALREADY INCLUDES prompt_tokens_details.cached_tokens.
         'cached_tokens_are_additive' => false,
+        'pricing_url' => 'https://openai.com/api/pricing/',
         'models' => [
+            'gpt-4.1-nano' => ['input' => 0.10, 'output' => 0.40],
+            'gpt-4o-mini' => ['input' => 0.15, 'output' => 0.60],
             'gpt-5.6-luna' => ['input' => 0.20, 'output' => 1.20],
+            'gpt-4.1-mini' => ['input' => 0.40, 'output' => 1.60],
+            'gpt-4.1' => ['input' => 2.00, 'output' => 8.00],
+            'gpt-4o' => ['input' => 2.50, 'output' => 10.00],
             'gpt-5.6-sol' => ['input' => 4.00, 'output' => 20.00],
         ],
     ],
@@ -146,9 +157,13 @@ return [
         // accounts issued a new-format key.
         'key_prefixes' => ['AIza', 'AQ.'],
         'cached_tokens_are_additive' => false,
+        'pricing_url' => 'https://ai.google.dev/pricing',
         'models' => [
+            'gemini-2.5-flash-lite' => ['input' => 0.10, 'output' => 0.40],
+            'gemini-2.5-flash' => ['input' => 0.30, 'output' => 2.50],
             'gemini-3.5-flash-lite' => ['input' => 0.30, 'output' => 2.50],
             'gemini-3.7-flash' => ['input' => 0.75, 'output' => 3.75],
+            'gemini-2.5-pro' => ['input' => 1.25, 'output' => 10.00],
         ],
     ],
 

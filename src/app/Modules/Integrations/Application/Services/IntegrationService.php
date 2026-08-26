@@ -43,6 +43,32 @@ readonly class IntegrationService
         );
     }
 
+    /**
+     * Which providers this account can actually call right now. Callers outside the module
+     * ask this instead of reading a status off an Integration, which is not theirs to touch.
+     *
+     * @return Collection<int, IntegrationProvider>
+     */
+    public function connectedProviders(int $accountId): Collection
+    {
+        return $this->repository->allForAccount($accountId)
+            ->filter(static fn (Integration $integration): bool => $integration->status === IntegrationStatus::CONNECTED)
+            ->map(static fn (Integration $integration): IntegrationProvider => $integration->provider)
+            ->values();
+    }
+
+    /**
+     * Which accounts a scheduled job has to visit. Asked here rather than by scanning every
+     * account, so an account that never connected a provider costs nothing.
+     *
+     * @param  list<IntegrationProvider>  $providers
+     * @return Collection<int, int>
+     */
+    public function accountIdsConnectedTo(array $providers): Collection
+    {
+        return $this->repository->accountIdsConnectedTo($providers);
+    }
+
     public function connectApiKey(ConnectApiKeyDTO $dto): Integration
     {
         if ($dto->provider->kind() !== IntegrationKind::API_KEY) {

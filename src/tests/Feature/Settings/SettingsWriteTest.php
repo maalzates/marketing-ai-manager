@@ -49,6 +49,43 @@ class SettingsWriteTest extends TestCase
         $this->assertSame('account', $result['features.tiktok']['scope']);
     }
 
+    /**
+     * The contract the Settings screen depends on. Every one of these keys is a field on that
+     * page, and each was previously sent under an invented flat name the registry never
+     * declared — so the whole screen answered 422 and nothing was ever stored.
+     */
+    public function test_every_key_the_settings_screen_writes_is_accepted(): void
+    {
+        $values = [
+            'ai.models.same_for_all' => true,
+            'ai.models.per_task.chat' => 'gpt-5.6-sol',
+            'ai.budget.daily_tokens' => 500000,
+            'ai.budget.monthly_tokens' => 9000000,
+            'ai.budget.alert_threshold_percent' => 90,
+            'apify.budget.daily_calls' => 25,
+            'guardian.enabled' => false,
+            'guardian.frequency_days' => 3,
+            'guardian.reports_enabled' => false,
+            'guardian.auto_skip_without_active_experiments' => false,
+            'notifications.proposals' => false,
+            'notifications.reports' => false,
+            'notifications.token_expiry' => false,
+            'notifications.usage_limits' => false,
+            'campaigns.meta_ad_account_id' => '155760362203',
+            'campaigns.meta_sandbox_ad_account_id' => '155760362204',
+            'preferences.timezone' => 'America/Bogota',
+            'preferences.currency' => 'COP',
+            'preferences.locale' => 'en',
+        ];
+
+        $result = $this->putJson('/api/v1/settings', ['values' => $values])->assertOk()->json('result');
+
+        foreach ($values as $key => $value) {
+            $this->assertSame($value, $result[$key]['value'], $key);
+            $this->assertSame('account', $result[$key]['scope'], $key);
+        }
+    }
+
     public function test_rejects_a_key_that_is_not_declared_in_the_registry(): void
     {
         $this->putJson('/api/v1/settings', ['values' => ['features.telepathy' => true]])

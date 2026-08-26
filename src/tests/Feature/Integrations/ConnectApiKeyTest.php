@@ -78,6 +78,41 @@ class ConnectApiKeyTest extends TestCase
         $this->assertSame(IntegrationStatus::DISCONNECTED->value, $this->anthropicRow($response->json('result'))['status']);
     }
 
+    /**
+     * Settings → Models offers a list instead of a text field, and the list comes from here:
+     * the same response already says which providers are connected, so availability and
+     * catalogue never have to be cross-referenced by the client.
+     */
+    public function test_every_llm_provider_carries_the_models_it_offers(): void
+    {
+        $response = $this->getJson('/api/v1/integrations')->assertOk();
+
+        $anthropic = collect($this->anthropicRow($response->json('result'))['models']);
+
+        $this->assertContains('claude-opus-5', $anthropic->pluck('id')->all());
+        $this->assertSame(['id', 'input', 'output', 'state'], array_keys($anthropic->first()));
+    }
+
+    public function test_a_provider_that_is_not_an_llm_carries_no_models(): void
+    {
+        $response = $this->getJson('/api/v1/integrations')->assertOk();
+
+        $apify = collect($response->json('result'))->firstWhere('provider', IntegrationProvider::APIFY->value);
+
+        $this->assertSame([], $apify['models']);
+    }
+
+    /** JSON has no float, so the guarantee is "a number the client can compare", not a type. */
+    public function test_the_catalogue_never_leaks_a_model_price_as_a_string(): void
+    {
+        $response = $this->getJson('/api/v1/integrations')->assertOk();
+
+        $first = $this->anthropicRow($response->json('result'))['models'][0];
+
+        $this->assertIsNumeric($first['input']);
+        $this->assertIsNumeric($first['output']);
+    }
+
     public function test_the_credentials_column_is_encrypted_at_rest(): void
     {
         $this->connectAnthropic()->assertOk();

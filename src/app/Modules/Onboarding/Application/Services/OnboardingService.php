@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Onboarding\Application\Services;
 
+use App\Modules\Ai\Application\Services\ModelDefaults;
 use App\Modules\Audit\Application\DTO\RecordActionDTO;
 use App\Modules\Audit\Application\Services\ActionLogService;
 use App\Modules\Audit\Domain\Enums\ActionOrigin;
@@ -19,6 +20,8 @@ use App\Modules\Onboarding\Domain\Exceptions\OnboardingProviderRequiredException
 use App\Modules\Onboarding\Domain\Exceptions\OnboardingStepVerificationFailedException;
 use App\Modules\Onboarding\Domain\Support\OnboardingProgress;
 use App\Modules\Onboarding\Infrastructure\Persistence\OnboardingState;
+use App\Modules\Settings\Application\Services\SettingsService;
+use App\Modules\Settings\Domain\Enums\SettingScope;
 use Illuminate\Support\Collection;
 
 readonly class OnboardingService
@@ -28,6 +31,8 @@ readonly class OnboardingService
         private IntegrationService $integrations,
         private OnboardingGuideProvider $guides,
         private ActionLogService $actionLog,
+        private ModelDefaults $modelDefaults,
+        private SettingsService $settings,
     ) {}
 
     /**
@@ -74,13 +79,30 @@ readonly class OnboardingService
     {
         $integration = $this->integrations->verify($dto->accountId, self::providerFor($dto));
 
-        return $integration->status === IntegrationStatus::CONNECTED
-            ? $this->record($dto, OnboardingStepStatus::COMPLETED, $integration->provider)
-            : throw OnboardingStepVerificationFailedException::forStep(
+        if ($integration->status !== IntegrationStatus::CONNECTED) {
+            throw OnboardingStepVerificationFailedException::forStep(
                 $dto->step,
                 $integration,
                 $this->guides->docsUrl($integration->provider),
             );
+        }
+
+        $this->routeModelsTo($dto->accountId, $integration->provider);
+
+        return $this->record($dto, OnboardingStepStatus::COMPLETED, $integration->provider);
+    }
+
+    /**
+     * The registry's default model is Anthropic's for every task, so an account that connects
+     * OpenAI or Gemini would be routed to a provider it has no key for — and the first AI
+     * call would tell the user to connect Anthropic, which is not what they chose. Connecting
+     * an LLM is therefore also the moment its models become the account's.
+     */
+    private function routeModelsTo(int $accountId, IntegrationProvider $provider): void
+    {
+        foreach ($this->modelDefaults->forProvider($provider) as $key => $model) {
+            $this->settings->set(SettingScope::ACCOUNT, $accountId, $key, $model);
+        }
     }
 
     /** Skipping is a decision, not a failure: the feature stays locked and the CTA reopens this step. */

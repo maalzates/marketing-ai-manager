@@ -9,6 +9,7 @@ use App\Modules\Admin\Presentation\Http\Controllers\Api\AdminSettingController;
 use App\Modules\Admin\Presentation\Http\Controllers\Api\AdminUsageController;
 use App\Modules\Admin\Presentation\Http\Controllers\Api\AdminUserController;
 use App\Modules\Ai\Presentation\Http\Controllers\Api\AiSuggestionController;
+use App\Modules\Ai\Presentation\Http\Controllers\Api\ModelCatalogController;
 use App\Modules\Assets\Presentation\Http\Controllers\Api\AssetController;
 use App\Modules\Audit\Presentation\Http\Controllers\Api\ActionLogController;
 use App\Modules\Audit\Presentation\Http\Controllers\Api\UsageController;
@@ -198,6 +199,7 @@ Route::prefix('v1')->group(function (): void {
     // --- Ai -----------------------------------------------------------------
     Route::middleware(['auth:sanctum', 'account'])->group(function (): void {
         Route::post('/ai/suggest', [AiSuggestionController::class, 'store']);
+        Route::post('/ai/models/refresh', [ModelCatalogController::class, 'store']);
     });
 
     // --- Reporting ----------------------------------------------------------

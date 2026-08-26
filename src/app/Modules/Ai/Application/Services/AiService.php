@@ -56,13 +56,20 @@ readonly class AiService
 
         $this->budget->assertWithinBudget($request->accountId, self::estimatedTokens($llmRequest));
 
-        return $this->record($request, $this->clients->forAccount(
+        return $this->record($request, $llmRequest->model, $this->clients->forAccount(
             $request->accountId,
-            $this->router->providerFor($llmRequest->model),
+            $this->router->providerFor($llmRequest->model, $request->accountId),
         )->complete($llmRequest));
     }
 
-    private function record(AiRequestDTO $request, LlmResponseDTO $response): LlmResponseDTO
+    /**
+     * Priced by the model that was *asked for*, not the one the answer names. Providers
+     * resolve an alias to a dated snapshot — `gpt-4.1-nano` comes back as
+     * `gpt-4.1-nano-2025-04-14` — and that id is not in the catalogue, so pricing by it
+     * failed the whole call. The served id is still what the ledger stores: the audit trail
+     * has to say which snapshot answered.
+     */
+    private function record(AiRequestDTO $request, string $requestedModel, LlmResponseDTO $response): LlmResponseDTO
     {
         $this->usage->recordLlmCall(new RecordLlmUsageDTO(
             $request->accountId,
@@ -74,7 +81,7 @@ readonly class AiService
             $response->outputTokens,
             $response->cachedInputTokens,
             $this->cost->estimate(
-                $response->model,
+                $requestedModel,
                 $response->inputTokens,
                 $response->outputTokens,
                 $response->cachedInputTokens,

@@ -125,14 +125,21 @@ class AiCompletionTest extends TestCase
         ]);
     }
 
-    /** Cache reads are billed at a tenth of the input rate on every provider. */
+    /**
+     * Cache reads are billed at a tenth of the input rate on every provider. Priced at the
+     * requested model — `claude-sonnet-5` — not at the one the fixture's body names: a
+     * provider that answers with a different id, alias or snapshot, does not get to change
+     * the rate that was agreed when the model was chosen.
+     *
+     * 19 input × 3.00 + 1500 cached × 3.00 × 0.1 + 9 output × 15.00 = 642 millionths.
+     */
     public function test_the_recorded_cost_prices_cache_reads_at_the_cheaper_rate(): void
     {
         $this->replaying('anthropic-cached.json');
 
         $this->complete()->assertOk();
 
-        $this->assertDatabaseHas('llm_usage_logs', ['estimated_cost_usd' => '0.001070']);
+        $this->assertDatabaseHas('llm_usage_logs', ['estimated_cost_usd' => '0.000642']);
     }
 
     public function test_the_usage_row_belongs_to_the_calling_account(): void

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Ai\Application\Jobs\RefreshModelCatalogJob;
 use App\Modules\Campaigns\Application\Jobs\DispatchCampaignMetricsSyncJob;
 use App\Modules\Competitors\Application\Jobs\SyncActiveCompetitorsJob;
 use App\Modules\Content\Application\Jobs\DispatchAudienceSnapshotsJob;
@@ -22,6 +23,10 @@ Artisan::command('inspire', function () {
 // strategies with nothing active — so an idle account costs no LLM call and no provider call.
 
 Schedule::job(new CheckIntegrationHealthJob)->dailyAt('03:00');
+
+// Before the health check, so a provider that retired a model is visible in Settings the
+// same morning rather than discovered by a failing call.
+Schedule::job(new RefreshModelCatalogJob)->dailyAt('02:30');
 
 Schedule::job(new SyncActiveCompetitorsJob)->dailyAt('03:30');
 

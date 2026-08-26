@@ -21,4 +21,22 @@ enum AiTask: string
     case CommentMining = 'comment_mining';
     case InsightExtraction = 'insight_extraction';
     case FieldSuggestion = 'field_suggestion';
+
+    public function settingKey(): string
+    {
+        return 'ai.models.per_task.'.$this->value;
+    }
+
+    /**
+     * Which tier the task belongs to. Judgement tasks write, decide or argue, so they ride
+     * the capable model; the rest classify or extract from text that is already there, and a
+     * cheap model does it as well for a fraction of the invoice.
+     */
+    public function prefersCapableModel(): bool
+    {
+        return match ($this) {
+            self::Chat, self::ContentScript, self::CampaignProposal, self::Verdict, self::Guardian => true,
+            self::CommentSentiment, self::CommentMining, self::InsightExtraction, self::FieldSuggestion => false,
+        };
+    }
 }

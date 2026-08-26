@@ -7,9 +7,11 @@ namespace Tests\Feature\Ai;
 use App\Models\User;
 use App\Modules\Accounts\Infrastructure\Persistence\Account;
 use App\Modules\Ai\Domain\Enums\AiTask;
+use App\Modules\Ai\Domain\Enums\LlmProvider;
 use App\Modules\Integrations\Infrastructure\Persistence\Integration;
 use App\Modules\Settings\Infrastructure\Persistence\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 use Symfony\Component\HttpFoundation\Response;
@@ -113,8 +115,42 @@ class ModelRoutingTest extends TestCase
         $this->assertSame(0, $this->transport->requestCount());
     }
 
+    /**
+     * The routing used to hand this straight to the credential resolver, which answered
+     * "you have not connected OpenAI yet" — naming a provider the account never chose. The
+     * account connected Anthropic, so the same tier on Anthropic is what it gets.
+     */
+    public function test_a_model_whose_provider_is_not_connected_falls_back_to_one_that_is(): void
+    {
+        $this->setting('ai.models.per_task.field_suggestion', 'gpt-5.6-luna');
+        $this->transport->queue(FakeTransport::fixture('anthropic-structured-suggestion.json'));
+
+        $this->suggest(AiTask::FieldSuggestion)->assertOk();
+
+        $this->assertSame(
+            LlmProvider::Anthropic->cheapestModel(),
+            $this->transport->decodedBody()['model'],
+        );
+    }
+
+    /** A judgement task keeps a capable model after the swap; only the provider changes. */
+    public function test_the_capable_tier_survives_the_fallback(): void
+    {
+        $this->setting('ai.models.per_task.chat', 'gpt-5.6-sol');
+        $this->transport->queue(FakeTransport::fixture('anthropic-structured-suggestion.json'));
+
+        $this->suggest(AiTask::Chat)->assertOk();
+
+        $this->assertSame(
+            LlmProvider::Anthropic->capableModel(),
+            $this->transport->decodedBody()['model'],
+        );
+    }
+
+    /** With nothing to fall back to, the credential error is the honest answer. */
     public function test_a_provider_the_account_has_not_connected_is_reported_as_not_connected(): void
     {
+        Integration::query()->where('account_id', $this->account->id)->delete();
         $this->setting('ai.models.per_task.field_suggestion', 'gpt-5.6-luna');
 
         $this->suggest(AiTask::FieldSuggestion)
@@ -122,6 +158,26 @@ class ModelRoutingTest extends TestCase
             ->assertJsonPath('errors.message', 'No has conectado OpenAI todavía. Configúralo en Integraciones.');
 
         $this->assertSame(0, $this->transport->requestCount());
+    }
+
+    /**
+     * Providers resolve an alias to a dated snapshot, and that id is not in the catalogue.
+     * Pricing by the answer's model turned every aliased model into a dead end: the call
+     * succeeded at the provider and the application then refused to bill it.
+     */
+    public function test_an_answer_naming_a_dated_snapshot_is_still_priced_and_recorded(): void
+    {
+        $answer = json_decode((string) file_get_contents(base_path('tests/Fixtures/llm/anthropic-structured-suggestion.json')), true);
+        $answer['model'] = 'claude-opus-5-20260514';
+        $this->transport->queue(FakeTransport::json($answer));
+
+        $this->suggest(AiTask::Chat)->assertOk();
+
+        $this->assertDatabaseHas('llm_usage_logs', [
+            'account_id' => $this->account->id,
+            'model' => 'claude-opus-5-20260514',
+        ]);
+        $this->assertGreaterThan(0.0, (float) DB::table('llm_usage_logs')->value('estimated_cost_usd'));
     }
 
     public function test_each_account_calls_the_provider_with_its_own_key(): void

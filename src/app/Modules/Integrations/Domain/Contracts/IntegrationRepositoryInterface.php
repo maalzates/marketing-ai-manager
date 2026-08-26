@@ -36,4 +36,10 @@ interface IntegrationRepositoryInterface
 
     /** @return Collection<int, int> */
     public function accountIdsWithOAuthIntegrations(): Collection;
+
+    /**
+     * @param  list<IntegrationProvider>  $providers
+     * @return Collection<int, int>
+     */
+    public function accountIdsConnectedTo(array $providers): Collection;
 }
