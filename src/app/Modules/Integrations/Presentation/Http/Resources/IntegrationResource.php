@@ -25,6 +25,14 @@ class IntegrationResource extends JsonResource
     {
         return [
             'provider' => $this->provider->value,
+            'label' => $this->provider->label(),
+            'purpose' => $this->provider->purpose(),
+            'group' => [
+                'key' => $this->provider->group()->value,
+                'label' => $this->provider->group()->label(),
+                'description' => $this->provider->group()->description(),
+                'position' => $this->provider->group()->position(),
+            ],
             'kind' => $this->kind->value,
             'status' => $this->status->value,
             'masked_key' => self::mask($this->credentials['api_key'] ?? null),

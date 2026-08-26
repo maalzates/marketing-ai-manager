@@ -113,6 +113,35 @@ class ConnectApiKeyTest extends TestCase
         $this->assertIsNumeric($first['output']);
     }
 
+    /**
+     * Settings groups the eight providers by what they are for. Ungrouped they read as eight
+     * equally required steps, when one language model is enough and two are not wired up yet.
+     */
+    public function test_every_provider_says_what_it_is_for_and_which_group_it_belongs_to(): void
+    {
+        $rows = collect($this->getJson('/api/v1/integrations')->assertOk()->json('result'))->keyBy('provider');
+
+        $this->assertSame('models', $rows['anthropic']['group']['key']);
+        $this->assertSame('ads', $rows['meta']['group']['key']);
+        $this->assertSame('storage', $rows['google']['group']['key']);
+        $this->assertSame('research', $rows['apify']['group']['key']);
+        $this->assertSame('channels', $rows['tiktok']['group']['key']);
+
+        $this->assertNotEmpty($rows['apify']['purpose']);
+        $this->assertNotEmpty($rows['apify']['group']['description']);
+        $this->assertSame('OpenAI', $rows['openai']['label']);
+    }
+
+    public function test_the_groups_are_ordered_so_the_screen_does_not_have_to_decide(): void
+    {
+        $rows = collect($this->getJson('/api/v1/integrations')->assertOk()->json('result'));
+
+        $positions = $rows->groupBy('provider')->map(fn ($group): int => $group->first()['group']['position']);
+
+        $this->assertLessThan($positions['channels'] ?? $positions['tiktok'], $positions['anthropic']);
+        $this->assertSame(0, $positions['anthropic']);
+    }
+
     public function test_the_credentials_column_is_encrypted_at_rest(): void
     {
         $this->connectAnthropic()->assertOk();

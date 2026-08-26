@@ -76,6 +76,19 @@ function selectable(group) {
 
 const hasConnectedProvider = computed(() => modelProviders.value.some((one) => one.connected));
 
+// Grouped by what each provider is for, in the order the backend declares: ungrouped, the
+// eight rows read as eight equally required steps, and only one of the three models is needed.
+const integrationGroups = computed(() => Object.values(
+    integrations.items.reduce((groups, integration) => {
+        const key = integration.group?.key ?? 'other';
+
+        groups[key] ??= { ...integration.group, key, items: [] };
+        groups[key].items.push(integration);
+
+        return groups;
+    }, {}),
+).sort((one, other) => (one.position ?? 0) - (other.position ?? 0)));
+
 onMounted(() => {
     settings.fetchAll();
     integrations.fetchAll();
@@ -132,15 +145,22 @@ function save() {
         <ErrorState v-else-if="settings.error && !settings.loaded" :message="settings.error" @retry="settings.fetchAll()" />
 
         <template v-else>
-            <section v-if="tab === 'integrations'" class="space-y-3">
-                <article
-                    v-for="integration in integrations.items"
-                    :key="integration.provider"
-                    class="rounded-card border border-line bg-surface p-5"
-                >
+            <section v-if="tab === 'integrations'" class="space-y-8">
+                <section v-for="group in integrationGroups" :key="group.key" class="space-y-3">
+                    <header>
+                        <h2 class="text-sm font-semibold text-ink">{{ group.label }}</h2>
+                        <p class="mt-1 max-w-3xl text-xs text-muted">{{ group.description }}</p>
+                    </header>
+
+                    <article
+                        v-for="integration in group.items"
+                        :key="integration.provider"
+                        class="rounded-card border border-line bg-surface p-5"
+                    >
                     <header class="flex flex-wrap items-start justify-between gap-3">
                         <div class="space-y-1">
-                            <h2 class="text-sm font-semibold capitalize">{{ integration.provider }}</h2>
+                            <h3 class="text-sm font-semibold">{{ integration.label ?? integration.provider }}</h3>
+                            <p class="max-w-xl text-xs text-muted">{{ integration.purpose }}</p>
                             <p class="flex flex-wrap items-center gap-2 text-xs">
                                 <span
                                     class="rounded-full px-2 py-0.5"
@@ -213,8 +233,9 @@ function save() {
                         >
                             Cancelar
                         </button>
-                    </form>
-                </article>
+                        </form>
+                    </article>
+                </section>
             </section>
 
             <form v-else class="max-w-2xl space-y-5 rounded-card border border-line bg-surface p-6" @submit.prevent="save">
