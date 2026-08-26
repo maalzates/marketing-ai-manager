@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import {
-    createAsset,
     deleteAsset,
     linkAssetToExperiment,
     listAssets,
+    uploadAsset,
 } from '@/repositories/assetRepository';
 import { useAsyncState } from '@/stores/useAsyncState';
 
@@ -21,8 +21,14 @@ export const useAssetsStore = defineStore('assets', () => {
         items.value = result?.data ?? result ?? [];
     }
 
-    async function create(payload) {
-        const result = await run(() => createAsset(payload), 'Pieza registrada en la biblioteca.');
+    async function upload(file, { type, strategyId }) {
+        const body = new FormData();
+
+        body.append('file', file);
+        body.append('type', type);
+        body.append('strategy_id', strategyId);
+
+        const result = await run(() => uploadAsset(body), `${file.name} subida a la biblioteca.`);
 
         if (result) {
             items.value = [result, ...items.value];
@@ -47,5 +53,5 @@ export const useAssetsStore = defineStore('assets', () => {
         }
     }
 
-    return { loading, error, fieldErrors, items, ready, fetchAll, create, linkToExperiment, remove };
+    return { loading, error, fieldErrors, items, ready, fetchAll, upload, linkToExperiment, remove };
 });

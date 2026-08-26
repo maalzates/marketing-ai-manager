@@ -32,7 +32,9 @@ server {
     root /var/www/html/public;
     index index.php index.html;
 
-    client_max_body_size 32M;
+    # Matches post_max_size in php.ini and the 300 MB cap in StoreAssetRequest. A smaller
+    # value here answers 413 before PHP ever sees the upload.
+    client_max_body_size 320M;
 
     error_log  /var/log/nginx/error.log;
     access_log /var/log/nginx/access.log;
@@ -52,7 +54,9 @@ server {
         # The visitor reached Cloudflare over HTTPS even though this hop is HTTP. Without
         # this, Laravel builds http:// URLs and the browser blocks them as mixed content.
         fastcgi_param HTTPS $forwarded_https;
-        fastcgi_read_timeout 120;
+        # A 300 MB upload has to reach Drive within this window, and the request does not
+    # return until it has.
+        fastcgi_read_timeout 600;
     }
 
     # Vite emits content-hashed filenames, so this is safe to cache forever.

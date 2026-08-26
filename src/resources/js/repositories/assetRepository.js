@@ -4,8 +4,10 @@ export async function listAssets(params = {}) {
     return (await http.get('/assets', { params })).data.result;
 }
 
-export async function createAsset(payload) {
-    return (await http.post('/assets', payload)).data.result;
+// Multipart, because the file itself travels: the backend is what puts it in Drive. Axios sets
+// the boundary from the FormData, so no Content-Type is passed by hand.
+export async function uploadAsset(formData) {
+    return (await http.post('/assets', formData)).data.result;
 }
 
 export async function linkAssetToExperiment(id, experimentId) {

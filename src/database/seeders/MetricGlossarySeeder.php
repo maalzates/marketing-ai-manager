@@ -140,7 +140,7 @@ class MetricGlossarySeeder extends Seeder
                 ],
             ],
 
-            'hook-rate' => [
+            'hook_rate' => [
                 'title' => 'Hook rate — tasa de enganche',
                 'body' => <<<'TEXT'
                     **Qué es.** El porcentaje de personas que no pasaron de largo en los
@@ -195,7 +195,7 @@ class MetricGlossarySeeder extends Seeder
                 ],
             ],
 
-            'engagement-rate' => [
+            'engagement_rate' => [
                 'title' => 'Engagement rate — tasa de interacción',
                 'body' => <<<'TEXT'
                     **Qué es.** Qué proporción de la gente que vio la pieza hizo algo con
@@ -391,7 +391,67 @@ class MetricGlossarySeeder extends Seeder
                 ],
             ],
 
-            'cost-per-follower' => [
+            'north_star_metric' => [
+                'title' => 'Métrica norte',
+                'body' => <<<'TEXT'
+                    **Qué es.** La única métrica que decide si una estrategia va bien. No un
+                    panel con doce números: uno, elegido a propósito, contra el que se juzga
+                    cada experimento y cada propuesta del guardián.
+
+                    **Cómo se elige.** Tiene que cumplir tres cosas: que se mueva con lo que
+                    tú haces, que se pueda medir sin discusión, y que si sube, el negocio
+                    esté mejor. «Seguidores» falla la tercera casi siempre. «Ingresos» falla
+                    la primera cuando el ciclo de venta es largo. Lo habitual que sí funciona:
+                    conversiones, ROAS, costo por adquisición o costo por seguidor, según en
+                    qué se esté jugando el mes.
+
+                    **Qué valores son buenos.** Ninguno en abstracto. Lo que importa es la
+                    dirección contra el punto de partida que quedó registrado al crear la
+                    estrategia, y que el resto de las métricas no se hayan deteriorado para
+                    conseguirlo.
+
+                    **Cuándo no fiarse.** Cuando cambia a mitad de camino. Cambiar la métrica
+                    norte reinicia la comparación: los experimentos anteriores dejan de ser
+                    comparables y el histórico deja de significar lo que decía. Si de verdad
+                    hace falta cambiarla, lo honesto es abrir otra estrategia.
+                    TEXT,
+                'metadata' => [
+                    'unit' => 'varies',
+                    'good_when' => 'depends',
+                ],
+            ],
+
+            'learning_phase' => [
+                'title' => 'Fase de aprendizaje',
+                'body' => <<<'TEXT'
+                    **Qué es.** El período en el que Meta todavía está averiguando a quién
+                    enseñarle un conjunto de anuncios. Mientras dura, la entrega es inestable
+                    y el costo por resultado es peor de lo que va a ser.
+
+                    **Cómo se calcula.** Termina cuando el conjunto de anuncios acumula unos
+                    **50 eventos de optimización en 7 días**. No 50 clics ni 50 impresiones:
+                    50 del evento por el que está optimizando. De ahí sale la fórmula del
+                    presupuesto diario mínimo: (CPA objetivo × 50) ÷ 7.
+
+                    **Qué valores son buenos.** Salir de ella. Un conjunto que no llega a los
+                    50 eventos se queda en «aprendizaje limitado» y nunca estabiliza: la
+                    respuesta no es esperar más, es subir el presupuesto, ampliar el público o
+                    optimizar por un evento más frecuente.
+
+                    **Cuándo no fiarse.** De cualquier lectura hecha dentro de ella. Es el
+                    error más caro y el más común: pausar por un CPA malo del día 2, o
+                    declarar ganador a un anuncio del día 3. Y cada edición significativa
+                    —presupuesto, público, creatividad, evento— **reinicia la fase**, así que
+                    tocar un conjunto todos los días equivale a no salir nunca de ella.
+                    TEXT,
+                'metadata' => [
+                    'unit' => 'count',
+                    'good_when' => 'lower',
+                    'learning_phase_threshold' => 50,
+                ],
+            ],
+
+            'cost_per_follower' => [
                 'title' => 'Costo por seguidor',
                 'body' => <<<'TEXT'
                     **Qué es.** Lo que cuesta ganar un seguidor nuevo cuando la estrategia

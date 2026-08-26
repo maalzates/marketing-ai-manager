@@ -3,7 +3,10 @@ import { ref } from 'vue';
 import { listKnowledge, showKnowledge } from '@/repositories/knowledgeRepository';
 import { useAsyncState } from '@/stores/useAsyncState';
 
-const GLOSSARY = 'glossary';
+// The value of `KnowledgeType::GlossaryTerm`. It is a route segment the backend validates
+// against that enum, so a friendlier-looking 'glossary' fails every fetch with
+// "The selected type is invalid" — and every tooltip in the application goes quiet.
+const GLOSSARY = 'glossary_term';
 
 export const useKnowledgeStore = defineStore('knowledge', () => {
     const { loading, error, run } = useAsyncState();

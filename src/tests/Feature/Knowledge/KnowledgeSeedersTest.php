@@ -10,6 +10,8 @@ use Database\Seeders\DomainKnowledgeSeeder;
 use Database\Seeders\MetricGlossarySeeder;
 use Database\Seeders\OnboardingGuideSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 use Tests\TestCase;
 
@@ -26,17 +28,44 @@ class KnowledgeSeedersTest extends TestCase
         'reach',
         'cpm',
         'ctr',
-        'hook-rate',
+        'hook_rate',
         'retention',
-        'engagement-rate',
+        'engagement_rate',
         'cpc',
         'cpa',
         'cpl',
         'roas',
         'frequency',
         'conversions',
-        'cost-per-follower',
+        'cost_per_follower',
+        'north_star_metric',
+        'learning_phase',
     ];
+
+    /**
+     * The list above is written from the spec, which is why it never noticed that the UI had
+     * grown two terms nobody seeded: `<TermTooltip concept="north_star_metric">` rendered
+     * "Sin explicación disponible todavía." and its link led to an empty page.
+     *
+     * So the guarantee is checked from the other side too — against what the interface
+     * actually asks for. A new tooltip with no entry fails here instead of in front of a user.
+     */
+    public function test_every_concept_the_interface_asks_for_has_a_glossary_entry(): void
+    {
+        $this->seed(MetricGlossarySeeder::class);
+
+        $referenced = collect(File::allFiles(base_path('resources/js')))
+            ->flatMap(fn ($file): array => Str::matchAll('/concept="([a-z0-9_]+)"/', $file->getContents())->all())
+            ->unique();
+
+        $this->assertNotEmpty($referenced, 'No concept was found: the tooltip syntax must have changed.');
+
+        $seeded = KnowledgeEntry::query()
+            ->where('type', KnowledgeType::GlossaryTerm)
+            ->pluck('key');
+
+        $this->assertSame([], $referenced->diff($seeded)->values()->all());
+    }
 
     /**
      * The numeric rule parameters the Experiments module computes its warnings from. A
@@ -116,12 +145,26 @@ class KnowledgeSeedersTest extends TestCase
         );
     }
 
+    /**
+     * Two glossary entries are concepts rather than measurements: a north star metric is
+     * whichever metric the strategy chose, and the learning phase is a state Meta is in. They
+     * still declare a unit and a direction; inventing a formula for them would be fudging a
+     * contract to make it pass.
+     *
+     * @var list<string>
+     */
+    private const array CONCEPTS_WITHOUT_A_FORMULA = ['north_star_metric', 'learning_phase'];
+
     public function test_every_seeded_glossary_entry_declares_a_formula_a_unit_and_a_direction(): void
     {
         $this->seed(MetricGlossarySeeder::class);
 
         $this->entriesOfType(KnowledgeType::GlossaryTerm)->each(function (KnowledgeEntry $entry): void {
-            foreach (['formula', 'unit', 'good_when'] as $key) {
+            $required = in_array($entry->key, self::CONCEPTS_WITHOUT_A_FORMULA, true)
+                ? ['unit', 'good_when']
+                : ['formula', 'unit', 'good_when'];
+
+            foreach ($required as $key) {
                 $this->assertArrayHasKey($key, $entry->metadata, "`{$entry->key}` has no `{$key}`.");
                 $this->assertNotEmpty($entry->metadata[$key], "`{$entry->key}` has an empty `{$key}`.");
             }
