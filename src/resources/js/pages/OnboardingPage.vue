@@ -6,9 +6,11 @@ import FormField from '@/components/FormField.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import { useIntegrationsStore } from '@/stores/integrations';
 import { useOnboardingStore } from '@/stores/onboarding';
+import { useUiStore } from '@/stores/ui';
 
 const onboarding = useOnboardingStore();
 const integrations = useIntegrationsStore();
+const ui = useUiStore();
 const route = useRoute();
 const router = useRouter();
 
@@ -31,10 +33,36 @@ onMounted(async () => {
         await onboarding.fetch();
     }
 
+    if (await resolveOauthReturn()) {
+        return;
+    }
+
     if (onboarding.isFinished) {
         router.replace({ name: 'strategies' });
     }
 });
+
+// Coming back from an OAuth callback. The grant is already stored, but a step only completes
+// on a live verification, so closing it is this page's job — otherwise the wizard resumes on
+// the same step for ever and the connection looks like it failed.
+async function resolveOauthReturn() {
+    if (!ui.announceOauth(route.query)) {
+        return false;
+    }
+
+    const connected = route.query.status === 'connected'
+        && onboarding.steps.find((item) => item.providers?.some((one) => one.value === route.query.integration));
+
+    if (connected && await onboarding.save(connected.step, { provider: route.query.integration })) {
+        await advance();
+
+        return true;
+    }
+
+    router.replace({ name: 'onboarding', query: { step: activeKey.value } });
+
+    return true;
+}
 
 watch(step, (current) => {
     credential.value = '';

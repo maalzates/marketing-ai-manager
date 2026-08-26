@@ -20,10 +20,25 @@ export const useUiStore = defineStore('ui', () => {
         setTimeout(() => dismiss(id), TOAST_TTL);
     }
 
+    // The OAuth callback answers a browser navigation, so the only way to tell the user how it
+    // went is the query it lands with. Both pages that can receive it say it the same way.
+    function announceOauth({ status, integration, message }) {
+        if (!status) {
+            return false;
+        }
+
+        status === 'connected'
+            ? push('success', `Conexión con ${integration} completada.`)
+            : push('error', message || 'No se pudo completar la conexión.');
+
+        return true;
+    }
+
     return {
         toasts,
         sandbox,
         dismiss,
+        announceOauth,
         success: (message) => push('success', message),
         error: (message) => push('error', message),
         info: (message) => push('info', message),

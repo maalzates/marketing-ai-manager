@@ -74,6 +74,10 @@ const router = createRouter({
     ],
 });
 
+function oauthResult({ status, integration, message }) {
+    return status ? { status, integration, message } : {};
+}
+
 router.beforeEach(async (to) => {
     const auth = useAuthStore();
 
@@ -104,8 +108,9 @@ router.beforeEach(async (to) => {
     }
 
     // The wizard is resumable: the user lands on the step they left, not at the start.
+    // The OAuth result rides along, or bouncing here would swallow it.
     return onboarding.mustResume
-        ? { name: 'onboarding', query: { step: onboarding.resumeStep } }
+        ? { name: 'onboarding', query: { step: onboarding.resumeStep, ...oauthResult(to.query) } }
         : true;
 });
 

@@ -54,20 +54,12 @@ onMounted(() => {
     announceOauthResult();
 });
 
-// The OAuth callback redirects here with the outcome in the query, because the provider
-// sends the browser to the API and only the SPA can tell the user how it went.
+// The OAuth callback redirects here with the outcome in the query: the provider sends the
+// browser to the API, so this is the first place that can tell the user how it went.
 function announceOauthResult() {
-    const { status, integration, message } = route.query;
-
-    if (!status) {
-        return;
+    if (ui.announceOauth(route.query)) {
+        router.replace({ name: 'settings' });
     }
-
-    status === 'connected'
-        ? ui.success(`Conexión con ${integration} completada.`)
-        : ui.error(message || 'No se pudo completar la conexión.');
-
-    router.replace({ name: 'settings' });
 }
 
 watch(() => settings.values, (values) => Object.assign(form, values ?? {}));
