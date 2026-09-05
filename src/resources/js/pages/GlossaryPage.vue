@@ -40,7 +40,10 @@ onMounted(knowledge.loadGlossary);
             <div class="grid gap-4 md:grid-cols-2">
                 <article v-for="term in terms" :key="term.key" class="rounded-card border border-line bg-surface p-5">
                     <h3 class="text-sm font-semibold text-ink">{{ term.title ?? term.key }}</h3>
-                    <p class="mt-1 text-sm text-muted">{{ term.summary }}</p>
+                    <p class="mt-1 text-sm text-ink">{{ term.summary }}</p>
+                    <p v-if="term.mattersWhen" class="mt-2 text-sm text-muted">
+                        <span class="font-medium text-ink">Cuándo importa:</span> {{ term.mattersWhen }}
+                    </p>
                     <p v-if="term.formula" class="mt-2 text-xs text-muted">Fórmula: {{ term.formula }}</p>
                 </article>
             </div>

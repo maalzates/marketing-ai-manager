@@ -10,9 +10,9 @@ use Database\Seeders\DomainKnowledgeSeeder;
 use Database\Seeders\MetricGlossarySeeder;
 use Database\Seeders\OnboardingGuideSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
-use Illuminate\Support\Collection;
 use Tests\TestCase;
 
 class KnowledgeSeedersTest extends TestCase

@@ -19,7 +19,7 @@ class MetricGlossarySeeder extends Seeder
     public function run(): void
     {
         foreach ($this->entries() as $key => $entry) {
-            KnowledgeEntry::query()->firstOrCreate(
+            KnowledgeEntry::query()->updateOrCreate(
                 [
                     'type' => KnowledgeType::GlossaryTerm,
                     'key' => $key,
@@ -55,6 +55,8 @@ class MetricGlossarySeeder extends Seeder
                     la impresión con reglas distintas.
                     TEXT,
                 'metadata' => [
+                    'summary' => 'Cuántas veces se mostró tu anuncio en una pantalla. Si la misma persona lo ve cuatro veces, cuentan cuatro.',
+                    'matters_when' => 'Para saber si la campaña está entregando. Nunca para decir si va bien: subir el presupuesto sube las impresiones y eso no mejora nada.',
                     'formula' => 'conteo de veces que la pieza se mostró en pantalla',
                     'unit' => 'count',
                     'good_when' => 'higher',
@@ -81,6 +83,8 @@ class MetricGlossarySeeder extends Seeder
                     engagement bajo suele indicar que se está alcanzando a gente equivocada.
                     TEXT,
                 'metadata' => [
+                    'summary' => 'Cuántas personas distintas vieron el anuncio. Cada persona cuenta una sola vez, aunque lo haya visto diez.',
+                    'matters_when' => 'Cuando querés que te conozca gente nueva. No se suma entre semanas ni entre plataformas: las mismas personas se repiten.',
                     'formula' => 'personas únicas alcanzadas = impresiones / frecuencia',
                     'unit' => 'count',
                     'good_when' => 'higher',
@@ -107,6 +111,8 @@ class MetricGlossarySeeder extends Seeder
                     empeorar el CPA. Es una métrica de diagnóstico, nunca un objetivo.
                     TEXT,
                 'metadata' => [
+                    'summary' => 'Cuánto te cuesta que el anuncio se muestre mil veces.',
+                    'matters_when' => 'Para comparar qué tan caro sale llegar a la gente. Si sube de golpe, suele ser audiencia saturada o más competencia en la subasta.',
                     'formula' => '(gasto / impresiones) * 1000',
                     'unit' => 'currency',
                     'good_when' => 'lower',
@@ -134,6 +140,8 @@ class MetricGlossarySeeder extends Seeder
                     son un 4 % que no significa nada.
                     TEXT,
                 'metadata' => [
+                    'summary' => 'De cada 100 personas que vieron el anuncio, cuántas hicieron clic.',
+                    'matters_when' => 'Para saber si el anuncio despierta interés. Alto y sin ventas significa que lo que promete el anuncio no coincide con lo que hay al otro lado.',
                     'formula' => '(clics / impresiones) * 100',
                     'unit' => 'percent',
                     'good_when' => 'higher',
@@ -162,6 +170,8 @@ class MetricGlossarySeeder extends Seeder
                     retención, nunca solo.
                     TEXT,
                 'metadata' => [
+                    'summary' => 'De cada 100 veces que se mostró el video, cuántas veces alguien se quedó los primeros 3 segundos.',
+                    'matters_when' => 'Cuando probás creatividades: mide si el arranque frena el scroll. Si es bajo, el problema es el primer segundo, no el producto.',
                     'formula' => '(reproducciones de 3 s / impresiones) * 100',
                     'unit' => 'percent',
                     'good_when' => 'higher',
@@ -189,6 +199,8 @@ class MetricGlossarySeeder extends Seeder
                     videos de duración y formato similares.
                     TEXT,
                 'metadata' => [
+                    'summary' => 'De los que empezaron el video, qué porcentaje sigue ahí en un punto dado: la mitad, el final.',
+                    'matters_when' => 'Para ver en qué momento se aburren y recortar ahí. Compará videos de duración parecida: uno corto siempre retiene mejor.',
                     'formula' => '(reproducciones que llegaron al hito / reproducciones iniciadas) * 100',
                     'unit' => 'percent',
                     'good_when' => 'higher',
@@ -217,6 +229,8 @@ class MetricGlossarySeeder extends Seeder
                     que nunca comprará: no lo confundas con intención de compra.
                     TEXT,
                 'metadata' => [
+                    'summary' => 'Cuánta gente reaccionó, comentó, guardó o compartió, sobre las personas que lo vieron.',
+                    'matters_when' => 'Cuando el objetivo es que el contenido circule. No es señal de ventas: hay piezas muy comentadas que no venden nada.',
                     'formula' => '(interacciones / alcance) * 100',
                     'unit' => 'percent',
                     'good_when' => 'higher',
@@ -243,6 +257,8 @@ class MetricGlossarySeeder extends Seeder
                     curioso es la forma más común de gastar bien y vender mal.
                     TEXT,
                 'metadata' => [
+                    'summary' => 'Cuánto pagás por cada clic.',
+                    'matters_when' => 'Para comparar el costo de traer visitas. Solo no alcanza: un clic barato que nunca compra sale caro.',
                     'formula' => 'gasto / clics',
                     'unit' => 'currency',
                     'good_when' => 'lower',
@@ -272,6 +288,8 @@ class MetricGlossarySeeder extends Seeder
                     tu contabilidad rara vez coinciden.
                     TEXT,
                 'metadata' => [
+                    'summary' => 'Cuánto te cuesta cada venta, o cada registro, o lo que hayas definido como conversión.',
+                    'matters_when' => 'Siempre que gastes para vender. Si el CPA supera lo que te deja cada venta, estás perdiendo plata aunque el resto se vea bien.',
                     'formula' => 'gasto / conversiones',
                     'unit' => 'currency',
                     'good_when' => 'lower',
@@ -298,6 +316,8 @@ class MetricGlossarySeeder extends Seeder
                     fase de aprendizaje.
                     TEXT,
                 'metadata' => [
+                    'summary' => 'Cuánto te cuesta cada persona que deja sus datos.',
+                    'matters_when' => 'Cuando vendés por contacto. Miralo junto a la calidad del lead: leads baratos que nunca contestan salen más caros que leads caros que cierran.',
                     'formula' => 'gasto / leads',
                     'unit' => 'currency',
                     'good_when' => 'lower',
@@ -326,6 +346,8 @@ class MetricGlossarySeeder extends Seeder
                     habrían ocurrido igual.
                     TEXT,
                 'metadata' => [
+                    'summary' => 'Cuánta venta devolvió cada peso invertido. 3 significa que por cada 1 que gastaste volvieron 3.',
+                    'matters_when' => 'Para decidir si escalar o cortar. Es ingreso, no ganancia: todavía no descontó el costo del producto ni los envíos.',
                     'formula' => 'ingresos atribuidos / gasto',
                     'unit' => 'ratio',
                     'good_when' => 'higher',
@@ -354,6 +376,8 @@ class MetricGlossarySeeder extends Seeder
                     falta de gente a quien alcanzar.
                     TEXT,
                 'metadata' => [
+                    'summary' => 'Cuántas veces vio el anuncio, en promedio, cada persona.',
+                    'matters_when' => 'Para detectar cansancio: cuando la frecuencia sube y el CTR baja, la gente ya está harta de la pieza y hay que cambiarla o ampliar el público.',
                     'formula' => 'impresiones / alcance',
                     'unit' => 'ratio',
                     'good_when' => 'lower',
@@ -384,6 +408,8 @@ class MetricGlossarySeeder extends Seeder
                     verdad antes de declarar un resultado de negocio.
                     TEXT,
                 'metadata' => [
+                    'summary' => 'Cuántas veces pasó lo que te importa: una compra, un registro, un mensaje.',
+                    'matters_when' => 'Es el número que se compara contra el gasto. Confirmá qué evento cuenta y cuánto tarda en atribuirse, o vas a comparar cosas distintas.',
                     'formula' => 'conteo de eventos de optimización atribuidos',
                     'unit' => 'count',
                     'good_when' => 'higher',
@@ -416,6 +442,8 @@ class MetricGlossarySeeder extends Seeder
                     hace falta cambiarla, lo honesto es abrir otra estrategia.
                     TEXT,
                 'metadata' => [
+                    'summary' => 'La única métrica con la que juzgás si la estrategia va bien. Una, elegida a propósito, no un tablero de doce números.',
+                    'matters_when' => 'Antes de decidir cualquier cosa. Sin ella, cada uno defiende el número que le queda mejor.',
                     'unit' => 'varies',
                     'good_when' => 'depends',
                 ],
@@ -445,6 +473,8 @@ class MetricGlossarySeeder extends Seeder
                     tocar un conjunto todos los días equivale a no salir nunca de ella.
                     TEXT,
                 'metadata' => [
+                    'summary' => 'El arranque en que la plataforma prueba a quién mostrar el anuncio, hasta juntar suficientes conversiones para estabilizarse.',
+                    'matters_when' => 'Los primeros días de cualquier anuncio: lo que pasa ahí es ruido, no resultado. Y si editás el anuncio, la fase vuelve a empezar.',
                     'unit' => 'count',
                     'good_when' => 'lower',
                     'learning_phase_threshold' => 50,
@@ -474,6 +504,8 @@ class MetricGlossarySeeder extends Seeder
                     junto al engagement rate de las semanas siguientes.
                     TEXT,
                 'metadata' => [
+                    'summary' => 'Cuánto pagaste por cada seguidor nuevo, descontando los que se fueron.',
+                    'matters_when' => 'Cuando la campaña busca audiencia. Un seguidor no es un cliente: no la mezcles con métricas de venta.',
                     'formula' => 'gasto / seguidores netos ganados',
                     'unit' => 'currency',
                     'good_when' => 'lower',

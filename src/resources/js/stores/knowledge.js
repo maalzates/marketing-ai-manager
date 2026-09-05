@@ -27,7 +27,18 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
         const result = await run(() => listKnowledge(GLOSSARY));
         const items = result?.data ?? result ?? [];
 
-        glossary.value = Object.fromEntries(items.map((item) => [item.key, item]));
+        glossary.value = Object.fromEntries(items.map((item) => [item.key, flatten(item)]));
+    }
+
+    // `body` is the long-form entry and `metadata` the structured half. The cards and the
+    // tooltips only ever want the short version, so it is flattened once here.
+    function flatten(item) {
+        return {
+            ...item,
+            summary: item.metadata?.summary ?? '',
+            mattersWhen: item.metadata?.matters_when ?? '',
+            formula: item.metadata?.formula ?? '',
+        };
     }
 
     function term(key) {

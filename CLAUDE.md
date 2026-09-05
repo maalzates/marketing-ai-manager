@@ -99,16 +99,16 @@ All work — features, fixes, investigations — follows a spec-first approach. 
 ```
 spec/
 └── YYYY-MM-DD-{case-name}/   # e.g. 2026-08-25-feat-campaign-briefs
-    ├── context.md        # Analysis phase — written BEFORE planning
-    ├── plan.md           # Implementation plan — written AFTER context is approved
-    └── guide.md          # Usage guide — written AFTER implementation is complete
+    ├── {qué-es-el-caso}.html   # Analysis canvas — written BEFORE planning
+    ├── plan.md                 # Implementation plan — written AFTER the canvas is approved
+    └── guide.md                # Usage guide — written AFTER implementation is complete
 ```
 
 ### Folder naming — date first, always
 
 Every case folder is named `YYYY-MM-DD-{case-name}`:
 
-- **`YYYY-MM-DD`** — the date the spec was **started** (when `context.md` was
+- **`YYYY-MM-DD`** — the date the spec was **started** (when the canvas was
   created). It never changes afterwards, even if the work spans weeks.
   Zero-padded, ISO order, so lexicographic sort == chronological sort and the
   folder list reads newest-last in any file browser.
@@ -135,27 +135,40 @@ Rules:
 
 ## Language Rule — Specs Always Written in Spanish
 
-All spec documents (`context.md`, `plan.md`, `guide.md`) **must be written in Spanish**. The only exception is **code itself** — code blocks, file paths, identifiers, class names, function names, route names, error strings copied verbatim from the codebase, and similar literal technical tokens stay in their original form (typically English).
+All spec documents (the canvas, `plan.md`, `guide.md`) **must be written in Spanish**. The only exception is **code itself** — code blocks, file paths, identifiers, class names, function names, route names, error strings copied verbatim from the codebase, and similar literal technical tokens stay in their original form (typically English).
 
 - Prose, headings, bullet text, tables, explanations, side-effect lists, examples, and questions → Spanish.
 - Code, paths like `app/Modules/Campaigns/...`, identifiers like `CampaignService::publish()`, route paths like `/api/campaigns`, literal payloads/strings → as in the codebase.
-- This rule applies to every phase: Phase 0 (context), Phase 0b (plan), Phase 5 (plan update + guide).
+- This rule applies to every phase: Phase 0 (canvas), Phase 0b (plan), Phase 5 (plan update + guide).
 
-## Phase 0 — Context (`context.md`)
+## Phase 0 — The case canvas
 
-Before any plan, create `spec/YYYY-MM-DD-{case-name}/context.md`. This file must contain:
+Before any plan, produce `spec/YYYY-MM-DD-{case-name}/{qué-es-el-caso}.html` by invoking
+the global canvas skills — they carry the what and the how, so do not restate them here:
 
-- **Plain-language description** of the problem or requirement (no jargon — write as if explaining to a new dev).
-- **Current implementation analysis**: how the existing feature/flow works today. Read the code, trace the data, document what you find.
-- **Side effects and risks**: any unintended consequences the proposed change could trigger. Be explicit — list them even if low-risk.
-- **Unknowns**: anything that blocks confident implementation. Document the question and what information is needed to resolve it.
-- **Simple examples**: concrete before/after scenarios that make the problem tangible.
+- **`estilo-canvas`** — always. Tone, format, HTML/SVG graphics.
+- **`feature-flow-canvas`** — feature, endpoint, module, layering, or a bug in one.
+- **`infra-topology-canvas`** — containers, nginx, deploy, pipelines, crons.
 
-**Do not create `plan.md` until the user explicitly says the context is good.**
+Pick the second by subject; both when the change spans code and infra.
+
+**The filename says what the case is**, kebab-case, in Spanish, readable on its own:
+`glosario-sin-descripcion-en-tarjetas.html`, `token-de-google-expira-sin-refrescar.html`.
+Never `context.html` or `canvas.html` — a name that describes nothing forces opening the
+file to find out what it is. Two canvases for one case get a numeric prefix
+(`1-…`, `2-…`) in reading order.
+
+The canvas is the whole case condensed: the problem, how it works today, the risks, the
+unknowns, and the fix proposed — the one file someone opens to understand everything
+fast. It stays fast to read because it obeys the skills' limits; the detail that does not
+fit belongs in `plan.md`, which is free to be long. Phase 5 brings the canvas up to what
+was actually built, so it never describes a fix that shipped differently.
+
+**Do not create `plan.md` until the user explicitly says the canvas is good.**
 
 ## Phase 0b — Plan (`plan.md`)
 
-Once context is approved, create `spec/YYYY-MM-DD-{case-name}/plan.md`. The plan must:
+Once the canvas is approved, create `spec/YYYY-MM-DD-{case-name}/plan.md`. The plan must:
 
 - Respect the layering described in the Architecture section
   (`Presentation/Http` → `Application/Services` → `Infrastructure/Repositories`
@@ -203,11 +216,13 @@ Run `/simplify` on all changed code. After simplification, re-run the affected t
 
 ### Phase 5 — Spec Update
 
-Two deliverables, both mandatory:
+Three deliverables, all mandatory:
 
-**1. Update `plan.md`** to reflect the actual implementation — not the original plan. If any files, approaches, or decisions changed during execution, the plan must match what was built.
+**1. Update the canvas** so it describes what shipped, not what was proposed: the fix in past tense, the graphics matching the code as merged, the unknowns either answered or still listed as open. Same skills, same limits.
 
-**2. Create `spec/YYYY-MM-DD-{case-name}/guide.md`** — a plain-language guide that answers "how does this work?" without requiring the reader to open `context.md` or `plan.md`.
+**2. Update `plan.md`** to reflect the actual implementation — not the original plan. If any files, approaches, or decisions changed during execution, the plan must match what was built.
+
+**3. Create `spec/YYYY-MM-DD-{case-name}/guide.md`** — a plain-language guide that answers "how does this work?" without requiring the reader to open the canvas or `plan.md`.
 
 `guide.md` must include:
 
@@ -224,11 +239,11 @@ The goal: someone asking "hey, what does this do and what happens if I call it w
 
 ## Rules
 
-- **Never skip the spec.** Even small fixes need a `context.md` and a `plan.md` before touching code.
+- **Never skip the spec.** Even small fixes need a canvas and a `plan.md` before touching code.
 - **Never run all phases at once.** Always wait for each phase to complete and be verified before launching the next.
 - **Never implement before plan approval.** The user must explicitly say the plan is good.
 - **Tests must pass before QC.** Do not run Phase 3 if Phase 2 has failures.
-- **Phase 5 is mandatory.** The spec must always reflect reality.
+- **Phase 5 is mandatory.** The canvas and the plan must always reflect what shipped.
 - **Always use agent teams, not todo tasks.** Parallel investigation and development is the point — it is what keeps delivery fast.
 
 # Project agents
