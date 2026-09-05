@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Infrastructure\Repositories;
 
 use App\Modules\Accounts\Application\DTO\AccountFilterDTO;
 use App\Modules\Accounts\Application\DTO\CreateAccountDTO;
+use App\Modules\Accounts\Application\DTO\UpdateAccountDTO;
 use App\Modules\Accounts\Domain\Contracts\AccountRepositoryInterface;
 use App\Modules\Accounts\Domain\Exceptions\AccountPersistenceFailedException;
 use App\Modules\Accounts\Infrastructure\Persistence\Account;
@@ -44,6 +45,17 @@ readonly class AccountRepository implements AccountRepositoryInterface
             ], fn (mixed $value): bool => $value !== null));
         } catch (Throwable $exception) {
             throw AccountPersistenceFailedException::wrap($exception, context: ['owner_user_id' => $dto->ownerUserId]);
+        }
+    }
+
+    public function update(Account $account, UpdateAccountDTO $dto): Account
+    {
+        try {
+            $account->update(['currency' => $dto->currency]);
+
+            return $account->refresh();
+        } catch (Throwable $exception) {
+            throw AccountPersistenceFailedException::wrap($exception, context: ['account_id' => $account->id]);
         }
     }
 

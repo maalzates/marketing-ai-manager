@@ -22,11 +22,12 @@ make down       # stop and remove them (the database volume survives)
 make exec       # bash inside the php-fpm container
 make logs       # tail every container
 make test       # the feature suite; `make test FILTER=CampaignTest` narrows it
+make coverage   # the suite with line coverage; HTML report in src/tests/build/coverage/
 make pint       # fix PHP code style
 make artisan CMD="route:list"   # anything else
 ```
 
-Ten targets, deliberately. Everything the Makefile does not cover is reachable
+Eleven targets, deliberately. Everything the Makefile does not cover is reachable
 with `make exec` or `make artisan CMD="..."`.
 
 `make up` on a fresh clone is the whole setup; the app comes up at
@@ -42,7 +43,7 @@ Single repo, two halves of one deployable:
 | Path | What lives there |
 |---|---|
 | `src/app/Modules/` | The whole backend. Every class lives in a module; `Core/` is the shared base. |
-| `src/resources/js/` | Vue 3 SPA — `pages/`, `layouts/`, `components/`, `stores/`, `repositories/`, `router/`. |
+| `src/resources/js/` | Vue 3 SPA — `pages/`, `layouts/`, `components/`, `stores/`, `repositories/`, `support/`, `router/`. |
 | `src/routes/api.php` | Every JSON endpoint. |
 | `src/routes/web.php` | One catch-all that renders `app.blade.php`; the SPA router owns the rest. |
 | `docker/` | nginx, php.ini, MySQL init SQL, observability configs. |

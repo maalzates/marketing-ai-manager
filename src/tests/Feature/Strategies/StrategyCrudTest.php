@@ -45,7 +45,7 @@ class StrategyCrudTest extends TestCase
             'account_id' => $this->account->id,
             'brand_profile_id' => $this->brandProfile->id,
             'name' => 'Captación local',
-            'north_star_metric' => 'cost_per_lead',
+            'north_star_metric' => 'cpl',
             'monthly_budget' => '1200.00',
             'status' => StrategyStatus::Active->value,
         ]);
@@ -66,7 +66,7 @@ class StrategyCrudTest extends TestCase
             'brand_profile_id' => $this->brandProfile->id,
             'name' => 'Mínima',
             'objective' => 'Probar el default.',
-            'north_star_metric' => 'ctr',
+            'north_star_metric' => 'roas',
         ])->assertCreated();
 
         $this->assertSame(
@@ -81,6 +81,45 @@ class StrategyCrudTest extends TestCase
         $this->postJson('/api/v1/strategies', $this->payload(['north_star_metric' => null]))
             ->assertStatus(422)
             ->assertJsonPath('errors.fields.north_star_metric.0', 'The north star metric field is required.');
+    }
+
+    /**
+     * The screen used to send whatever the user typed into a free-text field, so a metric the
+     * product does not measure was stored and never reported on.
+     */
+    public function test_rejects_a_north_star_metric_outside_the_declared_list(): void
+    {
+        $this->postJson('/api/v1/strategies', $this->payload(['north_star_metric' => 'engagement']))
+            ->assertStatus(422)
+            ->assertJsonPath('errors.fields.north_star_metric.0', 'The selected north star metric is invalid.');
+
+        $this->assertDatabaseCount('strategies', 0);
+    }
+
+    /** The field the form never asked for, which is why every creation from the screen answered 422. */
+    public function test_rejects_a_strategy_without_a_brand_profile(): void
+    {
+        $payload = $this->payload();
+        unset($payload['brand_profile_id']);
+
+        $this->postJson('/api/v1/strategies', $payload)
+            ->assertStatus(422)
+            ->assertJsonPath('errors.fields.brand_profile_id.0', 'The brand profile id field is required.');
+
+        $this->assertDatabaseCount('strategies', 0);
+    }
+
+    /** An untouched budget field on the screen sends an empty string, not a missing key. */
+    public function test_an_empty_budget_field_creates_the_strategy_without_a_budget(): void
+    {
+        $this->postJson('/api/v1/strategies', $this->payload(['monthly_budget' => '']))
+            ->assertCreated()
+            ->assertJsonPath('result.monthly_budget', null);
+
+        $this->assertDatabaseHas('strategies', [
+            'name' => 'Captación local',
+            'monthly_budget' => null,
+        ]);
     }
 
     public function test_rejects_a_negative_monthly_budget(): void
@@ -188,7 +227,7 @@ class StrategyCrudTest extends TestCase
             'brand_profile_id' => $this->brandProfile->id,
             'name' => 'Captación local',
             'objective' => 'Conseguir 30 leads al mes en el barrio.',
-            'north_star_metric' => 'cost_per_lead',
+            'north_star_metric' => 'cpl',
             'monthly_budget' => 1200,
             'constraints' => ['sin descuentos'],
             'guardian_config' => [

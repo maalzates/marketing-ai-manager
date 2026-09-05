@@ -46,7 +46,6 @@ export const SETTING_KEYS = {
     meta_ad_account_id: 'campaigns.meta_ad_account_id',
     meta_sandbox_ad_account_id: 'campaigns.meta_sandbox_ad_account_id',
     timezone: 'preferences.timezone',
-    currency: 'preferences.currency',
     locale: 'preferences.locale',
     ...Object.fromEntries(AI_TASKS.map(({ task }) => [`model_${task}`, `ai.models.per_task.${task}`])),
 };

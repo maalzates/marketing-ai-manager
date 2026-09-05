@@ -7,7 +7,9 @@ namespace App\Modules\Strategies\Presentation\Http\Requests;
 use App\Modules\Core\Application\Context\AccountContext;
 use App\Modules\Core\Presentation\Http\Requests\RequestHelperTrait;
 use App\Modules\Strategies\Application\DTO\UpdateStrategyDTO;
+use App\Modules\Strategies\Domain\Enums\NorthStarMetric;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateStrategyRequest extends FormRequest
 {
@@ -24,7 +26,7 @@ class UpdateStrategyRequest extends FormRequest
             'id' => ['required', 'integer', 'min:1'],
             'name' => ['nullable', 'string', 'max:255'],
             'objective' => ['nullable', 'string'],
-            'north_star_metric' => ['nullable', 'string', 'max:255'],
+            'north_star_metric' => ['nullable', Rule::enum(NorthStarMetric::class)],
             'monthly_budget' => ['nullable', 'numeric', 'min:0'],
             'constraints' => ['nullable', 'array'],
             'guardian_config' => ['nullable', 'array'],

@@ -28,6 +28,8 @@ with no way in is not finished.
 ```bash
 make test                       # full suite
 make test FILTER=CampaignTest   # one class or method
+make coverage                   # full suite + line coverage report
+make coverage FILTER=CampaignTest
 ```
 
 **Against MySQL, not sqlite.** `phpunit.xml` overrides only `DB_DATABASE`
@@ -36,6 +38,25 @@ suite talks to the same MySQL 8.4 the application talks to. The schema is create
 by `docker/mysql/01-create-testing-database.sql` when the volume is first built,
 and `make test` replays that same SQL first, so it also exists on volumes that
 predate it.
+
+## Line coverage
+
+`make coverage` runs the same suite with the `pcov` driver on and writes an HTML
+report to `src/tests/build/coverage/` (gitignored). Only `app/` is instrumented —
+`pcov.directory` in `docker/php/php.dev.ini` matches the `<source>` block in
+`phpunit.xml`. Full suite with coverage: ~90s; first measurement was 66.10% of
+lines.
+
+Use it filtered — `make coverage FILTER=YourTest` — right after writing a
+feature's tests, to see which branch of the new Service nobody walked. **Never
+read the total from a filtered run**: the report is overwritten with that run
+only, so the global percentage collapses because the rest of the backend never
+executed.
+
+Coverage finds code no test touches. It does not say the covered code is well
+tested — a line counts as covered even when the test that executed it asserted
+nothing about the result. It is never a target to chase, and there is no minimum
+threshold wired anywhere.
 
 This costs a couple of seconds per run and buys the thing repository tests exist
 for: JSON columns, `ENUM`, collations, strict mode and `ONLY_FULL_GROUP_BY`

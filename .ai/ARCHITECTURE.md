@@ -300,7 +300,8 @@ resources/js/
 ├── pages/            # one component per route
 ├── components/       # reusable pieces
 ├── stores/           # Pinia — state + user-facing feedback
-└── repositories/     # the only place axios is called
+├── repositories/     # the only place axios is called
+└── support/          # pure helpers, no state and no axios
 ```
 
 Flow: `Component → Store → Repository → axios → /api`.

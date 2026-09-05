@@ -26,7 +26,9 @@ readonly class FieldSuggestionService
 
     private const string PROMPT = 'Suggest a value for the field "%s" of this marketing workspace. '
         .'Ground the suggestion in the context provided above and justify it against that history. '
-        .'Return the value the user can paste into the field, a short rationale, and up to three alternatives.';
+        .'Return the value the user can paste into the field, a short rationale, and up to three alternatives. '
+        .'When the context declares an "options" list, the value must be exactly one of those options. '
+        .'Write the value and the rationale in Spanish: the product and its users are Spanish-speaking.';
 
     public function __construct(private AiService $ai) {}
 

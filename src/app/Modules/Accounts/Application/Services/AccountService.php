@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Application\Services;
 
 use App\Modules\Accounts\Application\DTO\AccountFilterDTO;
 use App\Modules\Accounts\Application\DTO\CreateAccountDTO;
+use App\Modules\Accounts\Application\DTO\UpdateAccountDTO;
 use App\Modules\Accounts\Domain\Contracts\AccountRepositoryInterface;
 use App\Modules\Accounts\Domain\Exceptions\AccountInactiveException;
 use App\Modules\Accounts\Domain\Exceptions\AccountNotFoundException;
@@ -48,6 +49,14 @@ readonly class AccountService
     public function create(CreateAccountDTO $dto): Account
     {
         return $this->repository->attachUser($this->repository->create($dto), $dto->ownerUserId);
+    }
+
+    public function update(UpdateAccountDTO $dto): Account
+    {
+        return $this->repository->update(
+            $this->findActiveById(new AccountFilterDTO($dto->accountId)),
+            $dto,
+        );
     }
 
     public function activate(AccountFilterDTO $filters): Account

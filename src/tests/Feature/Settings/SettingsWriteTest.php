@@ -74,7 +74,6 @@ class SettingsWriteTest extends TestCase
             'campaigns.meta_ad_account_id' => '155760362203',
             'campaigns.meta_sandbox_ad_account_id' => '155760362204',
             'preferences.timezone' => 'America/Bogota',
-            'preferences.currency' => 'COP',
             'preferences.locale' => 'en',
         ];
 
@@ -96,6 +95,19 @@ class SettingsWriteTest extends TestCase
             );
 
         $this->assertDatabaseMissing('settings', ['key' => 'features.telepathy']);
+    }
+
+    /** The currency now lives on the account, so the settings registry no longer declares it. */
+    public function test_rejects_the_currency_key_the_registry_no_longer_declares(): void
+    {
+        $this->putJson('/api/v1/settings', ['values' => ['preferences.currency' => 'COP']])
+            ->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
+            ->assertJsonPath(
+                'errors.message',
+                'The setting "preferences.currency" is not part of the settings registry.',
+            );
+
+        $this->assertDatabaseMissing('settings', ['key' => 'preferences.currency']);
     }
 
     public function test_rejects_a_value_whose_type_does_not_match_the_declared_default(): void

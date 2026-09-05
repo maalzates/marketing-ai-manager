@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Modules\Accounts\Infrastructure\Persistence\Account;
 use App\Modules\Brands\Infrastructure\Persistence\BrandProfile;
+use App\Modules\Strategies\Domain\Enums\NorthStarMetric;
 use App\Modules\Strategies\Domain\Enums\StrategyStatus;
 use App\Modules\Strategies\Infrastructure\Persistence\Strategy;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -31,7 +32,7 @@ class StrategyFactory extends Factory
                 ->id,
             'name' => fake()->words(3, true),
             'objective' => fake()->sentence(),
-            'north_star_metric' => fake()->randomElement(['followers_per_week', 'cost_per_lead', 'ctr']),
+            'north_star_metric' => fake()->randomElement(NorthStarMetric::cases())->value,
             'monthly_budget' => fake()->randomFloat(2, 100, 1000),
             'constraints' => fake()->words(2),
             'guardian_config' => [

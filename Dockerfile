@@ -27,7 +27,9 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         pdo_mysql \
         zip
 
-RUN pecl install redis && docker-php-ext-enable redis
+# pcov is the coverage driver: line coverage only, and fast enough to run the
+# whole suite. xdebug is not installed — nothing here needs step debugging.
+RUN pecl install redis pcov && docker-php-ext-enable redis pcov
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 

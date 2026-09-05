@@ -81,11 +81,12 @@ make down       # stop and remove them (the database volume survives)
 make exec       # bash inside the php-fpm container
 make logs       # tail every container
 make test       # the feature suite; `make test FILTER=CampaignTest` narrows it
+make coverage   # the suite with line coverage; HTML report in src/tests/build/coverage/
 make pint       # fix PHP code style
 make artisan CMD="route:list"   # anything else
 ```
 
-Ten targets, deliberately. Everything the Makefile does not cover is reachable
+Eleven targets, deliberately. Everything the Makefile does not cover is reachable
 with `make exec` or `make artisan CMD="..."`.
 
 ## Layout

@@ -5,8 +5,11 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import DataTable from '@/components/DataTable.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import LoadingState from '@/components/LoadingState.vue';
+import { useAuthStore } from '@/stores/auth';
 import { useExperimentsStore } from '@/stores/experiments';
 import { useStrategiesStore } from '@/stores/strategies';
+import { northStarLabel } from '@/support/metrics';
+import { formatMoney } from '@/support/money';
 
 const props = defineProps({
     id: { type: [String, Number], required: true },
@@ -14,6 +17,7 @@ const props = defineProps({
 
 const strategies = useStrategiesStore();
 const experiments = useExperimentsStore();
+const auth = useAuthStore();
 const router = useRouter();
 const confirmingDelete = ref(false);
 
@@ -62,11 +66,11 @@ async function remove() {
         <dl class="grid gap-4 sm:grid-cols-3">
             <div class="rounded-card border border-line bg-surface p-4">
                 <dt class="text-xs text-muted">Métrica norte</dt>
-                <dd class="mt-1 text-sm font-medium">{{ strategies.current.north_star_metric ?? '—' }}</dd>
+                <dd class="mt-1 text-sm font-medium">{{ northStarLabel(strategies.current.north_star_metric) }}</dd>
             </div>
             <div class="rounded-card border border-line bg-surface p-4">
                 <dt class="text-xs text-muted">Presupuesto mensual</dt>
-                <dd class="mt-1 text-sm font-medium">{{ strategies.current.monthly_budget ?? '—' }}</dd>
+                <dd class="mt-1 text-sm font-medium">{{ formatMoney(strategies.current.monthly_budget, auth.account?.currency) }}</dd>
             </div>
             <div class="rounded-card border border-line bg-surface p-4">
                 <dt class="text-xs text-muted">Estado</dt>

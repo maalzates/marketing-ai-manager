@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Accounts\Presentation\Http\Controllers\Api\AccountController;
 use App\Modules\Admin\Presentation\Http\Controllers\Api\AdminActionLogController;
 use App\Modules\Admin\Presentation\Http\Controllers\Api\AdminApiKeyController;
 use App\Modules\Admin\Presentation\Http\Controllers\Api\AdminRoleController;
@@ -76,6 +77,11 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('/integrations/{provider}', [IntegrationController::class, 'destroy']);
         Route::post('/integrations/{provider}/verify', [IntegrationController::class, 'verify']);
         Route::get('/integrations/{provider}/oauth/redirect', [IntegrationOAuthController::class, 'redirect']);
+    });
+
+    // --- Accounts -----------------------------------------------------------
+    Route::middleware(['auth:sanctum', 'account'])->group(function (): void {
+        Route::put('/account', [AccountController::class, 'update']);
     });
 
     // --- Settings -----------------------------------------------------------

@@ -6,11 +6,16 @@ APP   := $(DC) exec app
 APP_T := $(DC) exec -T app
 NODE  := $(DC) run --rm --no-deps node
 
+# The testing schema is created on demand: `test` and `coverage` both need it,
+# and a fresh volume has neither.
+CREATE_TEST_DB := $(DC) exec -T db sh -c 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" mysql -uroot' \
+	< docker/mysql/01-create-testing-database.sql
+
 export UID := $(shell id -u)
 export GID := $(shell id -g)
 
 .DEFAULT_GOAL := help
-.PHONY: help up start stop down exec logs test pint artisan
+.PHONY: help up start stop down exec logs test coverage pint artisan
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -54,9 +59,17 @@ logs: ## Tail every container's logs
 	$(DC) logs -f --tail=100
 
 test: ## Run the feature test suite against the MySQL testing schema
-	@$(DC) exec -T db sh -c 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" mysql -uroot' \
-		< docker/mysql/01-create-testing-database.sql
+	@$(CREATE_TEST_DB)
 	$(APP_T) php artisan test $(if $(FILTER),--filter=$(FILTER),)
+
+# Line coverage, measured by pcov. FILTER narrows the suite the same way as
+# `test`, which makes the report a per-feature one instead of a repo-wide one.
+coverage: ## Run the suite with line coverage: HTML report in src/tests/build/coverage/
+	@$(CREATE_TEST_DB)
+	$(APP_T) php artisan test --coverage-html tests/build/coverage \
+		$(if $(FILTER),--filter=$(FILTER),)
+	@echo ""
+	@echo "  open src/tests/build/coverage/index.html"
 
 pint: ## Fix PHP code style in place
 	$(APP_T) ./vendor/bin/pint

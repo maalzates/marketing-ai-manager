@@ -161,7 +161,7 @@ class StrategyBudgetCapTest extends TestCase
             'brand_profile_id' => $this->brandProfile->id,
             'name' => 'Captación local',
             'objective' => 'Conseguir 30 leads al mes en el barrio.',
-            'north_star_metric' => 'cost_per_lead',
+            'north_star_metric' => 'cpl',
             ...$overrides,
         ];
     }

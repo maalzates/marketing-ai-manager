@@ -40,6 +40,31 @@ class BrandProfileTest extends TestCase
         ]);
     }
 
+    /**
+     * The exact payload the brand profile screen sends. It used to send `one_liner`, `tone`
+     * and a `buyer_persona` string while omitting `kind` and `description` altogether, so
+     * every save from the screen answered 422 and no profile could be created.
+     */
+    public function test_the_brand_profile_screen_sends_every_field_the_api_requires(): void
+    {
+        $this->postJson('/api/v1/brand-profiles', [
+            'name' => 'mazzedev.co',
+            'kind' => BrandKind::PersonalBrand->value,
+            'description' => 'Automatización con IA para trabajo profesional no técnico.',
+            'value_proposition' => 'Muestro cómo automatizar trabajo real con IA. Sin código, sin humo.',
+            'niche' => 'Automatización con IA para trabajo profesional no técnico',
+            'tone_of_voice' => 'directo, concreto, sin jerga.',
+            'buyer_personas' => ['Profesionales independientes de 28 a 45 años, no técnicos.'],
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('brand_profiles', [
+            'account_id' => $this->account->id,
+            'name' => 'mazzedev.co',
+            'kind' => BrandKind::PersonalBrand->value,
+            'tone_of_voice' => 'directo, concreto, sin jerga.',
+        ]);
+    }
+
     public function test_returns_the_json_columns_as_arrays_rather_than_strings(): void
     {
         $response = $this->postJson('/api/v1/brand-profiles', $this->payload())->assertCreated();

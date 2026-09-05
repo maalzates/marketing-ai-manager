@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import ErrorState from '@/components/ErrorState.vue';
 import FormField from '@/components/FormField.vue';
 import LoadingState from '@/components/LoadingState.vue';
+import { useAuthStore } from '@/stores/auth';
 import { useIntegrationsStore } from '@/stores/integrations';
 import { AI_TASKS, useSettingsStore } from '@/stores/settings';
 import { useUiStore } from '@/stores/ui';
@@ -13,6 +14,7 @@ const router = useRouter();
 const ui = useUiStore();
 const settings = useSettingsStore();
 const integrations = useIntegrationsStore();
+const auth = useAuthStore();
 
 const tabs = [
     { key: 'integrations', label: 'Integraciones' },
@@ -96,6 +98,7 @@ onMounted(() => {
 });
 
 watch(() => settings.values, (values) => Object.assign(form, values), { immediate: true });
+watch(() => auth.account?.currency, (code) => { form.currency = code; }, { immediate: true });
 
 // The OAuth callback redirects here with the outcome in the query: the provider sends the
 // browser to the API, so this is the first place that can tell the user how it went.
@@ -116,7 +119,11 @@ function saveKey(provider) {
     });
 }
 
-function save() {
+async function save() {
+    if (form.currency !== auth.account?.currency && !await auth.saveCurrency(form.currency)) {
+        return;
+    }
+
     settings.save(form);
 }
 </script>
@@ -372,10 +379,20 @@ function save() {
                             <option v-for="zone in timezones" :key="zone" :value="zone">{{ zone }}</option>
                         </select>
                     </FormField>
-                    <FormField label="Moneda" :errors="settings.fieldErrors['preferences.currency'] ?? []">
+                    <FormField label="Moneda" :errors="auth.fieldErrors.currency ?? []">
                         <select v-model="form.currency" class="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm">
                             <option v-for="code in currencies" :key="code" :value="code">{{ code }}</option>
                         </select>
+                        <p class="mt-1 text-xs text-muted">
+                            Tiene que ser la misma que la de tu cuenta publicitaria de Meta, que se fija al crearla
+                            y no se puede cambiar.
+                            <a
+                                href="https://business.facebook.com/settings/ad-accounts"
+                                target="_blank"
+                                rel="noopener"
+                                class="text-brand-600 underline hover:text-brand-700"
+                            >Verificarla en Meta</a>.
+                        </p>
                     </FormField>
                     <FormField label="Idioma" :errors="settings.fieldErrors['preferences.locale'] ?? []">
                         <select v-model="form.locale" class="rounded-lg border border-line bg-surface px-3 py-2 text-sm">

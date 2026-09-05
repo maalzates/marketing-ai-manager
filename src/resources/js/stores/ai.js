@@ -13,7 +13,7 @@ export const useAiStore = defineStore('ai', () => {
     async function suggestFor(field, context = {}) {
         pendingField.value = field;
 
-        const result = await run(() => requestSuggestion({ field, context }));
+        const result = await run(() => requestSuggestion({ target: field, context }));
 
         pendingField.value = null;
 

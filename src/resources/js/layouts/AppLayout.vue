@@ -25,7 +25,10 @@ const work = [
 ];
 
 const account = computed(() => {
-    const entries = [{ name: 'settings', label: 'Configuración', icon: 'settings' }];
+    const entries = [
+        { name: 'brand-profile', label: 'Perfil de marca', icon: 'brand' },
+        { name: 'settings', label: 'Configuración', icon: 'settings' },
+    ];
 
     return auth.isAdmin
         ? [...entries, { name: 'admin-users', label: 'Admin', icon: 'admin' }]

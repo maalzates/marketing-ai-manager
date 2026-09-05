@@ -116,7 +116,6 @@ return [
 
     'preferences' => [
         'timezone' => 'UTC',
-        'currency' => 'USD',
         'locale' => 'es',
     ],
 

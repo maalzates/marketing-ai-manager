@@ -1,12 +1,13 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { TOKEN_KEY } from '@/bootstrap';
+import { updateAccount } from '@/repositories/accountRepository';
 import { googleRedirectUrl, logout as logoutRequest, me } from '@/repositories/authRepository';
 import { useAsyncState } from '@/stores/useAsyncState';
 import { useUiStore } from '@/stores/ui';
 
 export const useAuthStore = defineStore('auth', () => {
-    const { loading, error, run } = useAsyncState();
+    const { loading, error, fieldErrors, run } = useAsyncState();
 
     const token = ref(localStorage.getItem(TOKEN_KEY));
     const user = ref(null);
@@ -60,6 +61,18 @@ export const useAuthStore = defineStore('auth', () => {
         return true;
     }
 
+    async function saveCurrency(code) {
+        const result = await run(() => updateAccount({ currency: code }));
+
+        if (!result) {
+            return false;
+        }
+
+        account.value = result;
+
+        return true;
+    }
+
     async function logout() {
         await run(logoutRequest, 'Sesión cerrada.');
         clear();
@@ -73,6 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
     return {
         loading,
         error,
+        fieldErrors,
         token,
         user,
         account,
@@ -82,6 +96,7 @@ export const useAuthStore = defineStore('auth', () => {
         login,
         adoptToken,
         fetchMe,
+        saveCurrency,
         logout,
         clear,
     };
